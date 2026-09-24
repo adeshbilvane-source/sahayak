@@ -1,0 +1,42 @@
+name: my_first_project
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.3.2
+  image_picker: ^1.1.2
+  video_player: ^2.8.6
+  path_provider: ^2.1.6
+  youtube_player_flutter: ^9.1.1
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  image_path: "assets/sahayak_logo.png"
+  android: true
+  ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/yoga_images/
+    - assets/yoga_videos/
+    - assets/jigsaw_images/
+    - assets/identify_picture/
+    - assets/memory_matching/fruits/
+    - assets/memory_matching/household/
+    - assets/memory_matching/numbers/
+    - assets/memory_matching/shapes/
