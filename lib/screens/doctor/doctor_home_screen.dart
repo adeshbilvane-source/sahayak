@@ -211,12 +211,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               children: [
                 Text(
                   'Your Appointment',
-                  style: TextStyle(fontFamily: 'serif', fontSize: 30, fontWeight: FontWeight.bold, color: _primaryDark),
+                  style: TextStyle(fontFamily: 'serif', fontSize: 25, fontWeight: FontWeight.bold, color: _primaryDark),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Stay on track with your Patients visits.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -230,7 +230,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
                 decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.black),
