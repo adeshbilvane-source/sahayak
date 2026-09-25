@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// Apni login_screen.dart file ka sahi path yahan import zaroor karein
+import '../auth/login_screen.dart';
 
 class PatientSettingsScreen extends StatefulWidget {
   const PatientSettingsScreen({super.key});
@@ -14,7 +16,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
   final Color _red = const Color(0xFF8B2F27);
   final Color _inkSoft = const Color(0xFF5B6A61);
 
-  bool _notificationsEnabled = true; // Toggle ke liye state
+  bool _notificationsEnabled = true;
 
   void _showResetPasswordDialog() {
     showDialog(
@@ -94,8 +96,17 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
           _buildActionItem(Icons.security_outlined, 'Privacy & Security', onTap: () {}),
 
           const SizedBox(height: 40),
+
+          // YAHAN LOGOUT BUTTON UPDATE KIYA GAYA HAI
           ElevatedButton.icon(
-            onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/patient_login', (route) => false),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                // Agar aapki file me class ka naam kuch aur hai (jaise MainLoginScreen), toh use yahan update kar lein
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (Route<dynamic> route) => false,
+              );
+            },
             icon: const Icon(Icons.logout, color: Colors.white),
             label: const Text('Logout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             style: ElevatedButton.styleFrom(backgroundColor: _red, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),

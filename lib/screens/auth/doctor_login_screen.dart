@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../doctor/doctor_home_screen.dart';
 
 class DoctorLoginScreen extends StatefulWidget {
   const DoctorLoginScreen({super.key});
@@ -41,8 +42,12 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
 
     if (_isLogin) {
       if (_dummyDatabase.containsKey(email) && _dummyDatabase[email] == password) {
-        // Yahan doctor ke home page par jayega (abhi ke liye route add kiya hai)
-        Navigator.pushReplacementNamed(context, '/doctor_home');
+        // YAHAN NAVIGATION FIX KIYA HAI: Direct DoctorHomeScreen par bheja aur history clear ki
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const DoctorHomeScreen()),
+              (Route<dynamic> route) => false,
+        );
       } else {
         _showError('Incorrect Email or Password!');
       }
@@ -95,7 +100,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                 const SizedBox(height: 16),
                 Text(_isLogin ? 'Doctor Login' : 'Create Doctor Account', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _ink)),
                 const SizedBox(height: 40),
-                
+
                 if (!_isLogin) ...[
                   TextField(
                     controller: _usernameController,
@@ -103,20 +108,20 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                
+
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(labelText: 'Email', prefixIcon: const Icon(Icons.email), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 ),
                 const SizedBox(height: 16),
-                
+
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 ),
                 const SizedBox(height: 30),
-                
+
                 SizedBox(
                   width: double.infinity, height: 55,
                   child: ElevatedButton(
@@ -126,7 +131,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 TextButton(
                   onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(_isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login", style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w600)),
