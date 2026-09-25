@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-// Apni login_screen.dart file ka sahi path yahan import zaroor karein
 import '../auth/login_screen.dart';
+import 'doctor_schedule_screen.dart';
+import 'patient_schedule_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -56,14 +57,15 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       body: Stack(
         children: [
           // Background Decoration
-          Positioned(
-            top: -50,
-            right: -50,
-            child: Opacity(
-              opacity: 0.1,
-              child: Icon(Icons.eco, size: 300, color: _primaryDark),
-            ),
+          Positioned.fill(
+          child: Opacity(
+              opacity: 1,
+              child: Image.asset('assets/1.jpg',
+                  fit: BoxFit.cover
+              )
           ),
+          ),
+
 
           SafeArea(
             child: Column(
@@ -144,30 +146,30 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     return Row(
       children: [
         Container(
-          width: 70,
-          height: 70,
+          width: 100,
+          height: 150,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 5)),
             ],
             image: const DecorationImage(
-              image: AssetImage('assets/image 1.jpg'),
+              image: AssetImage('assets/image 2.png'),
               fit: BoxFit.cover,
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Good Morning,',
-              style: TextStyle(fontFamily: 'serif', fontSize: 24, fontWeight: FontWeight.bold, color: _primaryDark),
+              style: TextStyle(fontFamily: 'serif', fontSize: 30, fontWeight: FontWeight.bold, color: _primaryDark),
             ),
             Text(
               'Pranav',
-              style: TextStyle(fontFamily: 'serif', fontSize: 24, fontStyle: FontStyle.italic, color: _primaryDark),
+              style: TextStyle(fontFamily: 'serif', fontSize: 28, color: _primaryDark),
             ),
           ],
         ),
@@ -178,19 +180,19 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
+        color: Colors.white70,
+        borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: TextField(
         decoration: InputDecoration(
-          hintText: 'Search Patients, Appointments, Messages & A...',
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          prefixIcon: Icon(Icons.search, color: _primaryDark, size: 22),
+          hintText: 'Search Patients,Appointments,Messages',
+          hintStyle: TextStyle(color: Colors.black, fontSize: 18),
+          prefixIcon: Icon(Icons.search, color: _primaryDark, size: 38),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(vertical: 26),
         ),
       ),
     );
@@ -209,37 +211,51 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               children: [
                 Text(
                   'Your Appointment',
-                  style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.bold, color: _primaryDark),
+                  style: TextStyle(fontFamily: 'serif', fontSize: 30, fontWeight: FontWeight.bold, color: _primaryDark),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Stay on track with your Patients visits.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
               ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'View All',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+
+            // YAHAN GESTURE DETECTOR ADD KIYA GAYA HAI NAVIGATION KE LIYE
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DoctorScheduleScreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                    ]
+                ),
+                child: Text(
+                  'View All',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 26),
         SizedBox(
-          height: 70,
+          height: 90,width: double.infinity,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              _buildAppointmentCard('Mon', '23', '10:00 AM', 'Kamla Raj...', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80'),
-              const SizedBox(width: 12),
-              _buildAppointmentCard('Wed', '30', '06:00 PM', 'Pranav Jali...', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),
+              _buildAppointmentCard('Mon', '23', '10:00 AM', 'Kamla Raj...', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80'),  //changes in  the images after
+              const SizedBox(width: 25),
+              _buildAppointmentCard('Wed', '30', '06:00 PM', 'Pranav Jali...', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),//changes in  the images after
             ],
           ),
         ),
@@ -291,7 +307,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Widget _buildManagePatientsCard() {
     return Container(
-      height: 140,
+      height: 160,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
@@ -304,13 +320,13 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         children: [
           Positioned(
             left: -20,
-            bottom: -10,
+            bottom: 0,
             child: ClipRRect(
               borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20)),
               child: Image.asset(
-                'assets/image 2.jpg',
-                width: 160,
-                height: 140,
+                'assets/image 1.png',
+                width: 290,
+                height: 200,
                 fit: BoxFit.cover,
               ),
             ),
@@ -319,14 +335,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             right: 16,
             top: 16,
             bottom: 16,
-            width: 180,
+            width: 190,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Your Patients', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Your Patients', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                const Text('Manage records, health history, & ongoing care.', style: TextStyle(color: Colors.white70, fontSize: 10, height: 1.3)),
+                const Text('Manage records, health history, & ongoing care.', style: TextStyle(color: Colors.black, fontSize: 13, height: 1.3)),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -336,7 +352,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 8), elevation: 0,
                     ),
-                    onPressed: () {},
+                    onPressed: () {Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PatientScheduleScreen()),
+                    );},
                     child: const Text('View', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
@@ -350,40 +369,38 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Widget _buildPatientsAnalyticsCard() {
     return Container(
-      height: 140,
+      height: 160,
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: _lightBlue),
       child: Stack(
         children: [
           Positioned(
-            left: 0,
+            left: -20,
             bottom: 0,
             child: ClipRRect(
               borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), topLeft: Radius.circular(20)),
               child: Container(
-                width: 150, height: 140, color: _lightBlue,
-                // Yahan bhi aap chaho toh Image.network ki jagah AssetImage use kar sakte ho
-                child: Image.network(
-                  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=300&q=80',
+                width: 250, height: 160, color: _lightBlue,
+                child: Image.asset(
+                  'assets/image 2.png',
                   fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
           Positioned(
-            right: 16,
+            right: 18,
             top: 16,
             bottom: 16,
-            width: 180,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFF9F5EC), borderRadius: BorderRadius.circular(16)),
+            width: 200,
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Patients Analytics', style: TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.bold)),
+                  const Text('Patients Analytics', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('Track health trends, treatment outcomes, & metrics', style: TextStyle(color: Colors.grey.shade700, fontSize: 10, height: 1.2)),
+                  Text('Track health trends, treatment outcomes, & metrics', style: TextStyle(color: Colors.black, fontSize: 13, height: 1.2)),
                   const Spacer(),
                   SizedBox(
                     width: double.infinity,
@@ -399,7 +416,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   ),
                 ],
               ),
-            ),
+
           ),
         ],
       ),
@@ -444,7 +461,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
           // PROFILE ICON WITH LOGOUT DIALOG
           GestureDetector(
-            onTap: _showLogoutDialog, // Yahan tap karne par logout popup aayega
+            onTap: _showLogoutDialog,
             child: Icon(Icons.account_circle_outlined, color: _primaryDark, size: 28),
           ),
         ],
