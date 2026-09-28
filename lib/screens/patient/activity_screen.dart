@@ -15,7 +15,6 @@ class ActivityScreen extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          // Agar aapki image .jpg hai, toh yahan .png ki jagah .jpg kar dena
           image: AssetImage('assets/1.jpg'),
           fit: BoxFit.cover,
         ),
@@ -31,18 +30,43 @@ class ActivityScreen extends StatelessWidget {
           leading: Padding(
             padding: const EdgeInsets.only(left: 24.0, top: 8, bottom: 8),
             child: Container(
-              decoration: BoxDecoration(color: _green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-              child: IconButton(icon: Icon(Icons.arrow_back_ios_new, size: 18, color: _ink), onPressed: () => Navigator.pop(context)),
+              decoration: BoxDecoration(
+                color: _green.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new, size: 18, color: _ink),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
           ),
-          title: Text('Games', style: TextStyle(fontFamily: 'Fraunces', fontStyle: FontStyle.italic, fontWeight: FontWeight.w800, color: _ink, fontSize: 26)),
+          title: Text(
+            'Games',
+            style: TextStyle(
+              fontFamily: 'Fraunces',
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w800,
+              color: _ink,
+              fontSize: 26,
+            ),
+          ),
           centerTitle: false,
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 24.0, top: 10, bottom: 10),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))]),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _ink.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.translate, size: 16, color: _green),
@@ -74,7 +98,7 @@ class ActivityScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child:_buildImageCard('Memory cards', 'Find two alike', 'assets/memory_game.png', () {
+                    child: _buildImageCard('Memory cards', 'Find two alike', 'assets/memory_game.png', () {
                       Navigator.pushNamed(context, '/memory_match');
                     }),
                   ),
@@ -92,7 +116,6 @@ class ActivityScreen extends StatelessWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildImageCard('Sort buttons', 'Match shape and colour', 'assets/button_sort.png', () {
-                      // Yahan seedhe game screen par navigate hoga
                       Navigator.pushNamed(context, '/game_button_sort');
                     }),
                   ),
@@ -106,13 +129,11 @@ class ActivityScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               _buildImageCard('Yoga & Rest', 'Gentle stretching and breathing', 'assets/yoga.png', () {
-                // Yahan se direct aapka YogaPage open hoga
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const YogaPage()),
                 );
               }, isLarge: true),
-
             ],
           ),
         ),

@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
-// Ensure you have created this file and it contains the ActivityGameTutorialOverlay class
 import 'activity_tutorial_overlay.dart';
 
 enum CategoryTab { random, familyPhotos, mySurroundings }
@@ -74,7 +73,7 @@ class _IdentifyPictureScreenState extends State<IdentifyPictureScreen> {
   final Color _blueHint = const Color(0xFF4A90E2);
   final Color _white = const Color(0xFFFFFFFF);
 
-  // 1. Folder Assets for Random Category only
+  // 1. Offline Local Folder Assets for Random Category
   final List<Map<String, String>> _realRandomData = const [
     {'name': 'Car', 'image': 'assets/identify_picture/1.jpg'},
     {'name': 'Dog', 'image': 'assets/identify_picture/2.jpg'},
@@ -122,8 +121,13 @@ class _IdentifyPictureScreenState extends State<IdentifyPictureScreen> {
   final ImagePicker _picker = ImagePicker();
   int _sessionStartMillis = DateTime.now().millisecondsSinceEpoch;
 
-  final List<String> _familyMemberOptions = const ['Father', 'Mother', 'Sister', 'Brother', 'Son', 'Daughter', 'Grandson', 'Grand Daughter', 'Grand Father', 'Grand Mother', 'Friend'];
-  final List<String> _roomOptions = const ['Living Room', 'Kitchen', 'Bedroom', 'Balcony', 'Garden', 'Temple Area', 'Main Door'];
+  final List<String> _familyMemberOptions = const [
+    'Father', 'Mother', 'Sister', 'Brother', 'Son', 'Daughter',
+    'Grandson', 'Grand Daughter', 'Grand Father', 'Grand Mother', 'Friend'
+  ];
+  final List<String> _roomOptions = const [
+    'Living Room', 'Kitchen', 'Bedroom', 'Balcony', 'Garden', 'Temple Area', 'Main Door'
+  ];
 
   @override
   void initState() {
@@ -403,11 +407,32 @@ class _IdentifyPictureScreenState extends State<IdentifyPictureScreen> {
 
   Widget _buildImage(String path) {
     if (path.startsWith('assets/')) {
-      return Image.asset(path, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 50))));
+      return Image.asset(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (c, e, s) => Container(
+          color: Colors.grey[300],
+          child: const Center(child: Icon(Icons.broken_image, size: 50)),
+        ),
+      );
     } else if (path.startsWith('http')) {
-      return Image.network(path, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 50))));
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (c, e, s) => Container(
+          color: Colors.grey[300],
+          child: const Center(child: Icon(Icons.broken_image, size: 50)),
+        ),
+      );
     } else {
-      return Image.file(File(path), fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.grey[300], child: const Center(child: Icon(Icons.image, size: 50))));
+      return Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        errorBuilder: (c, e, s) => Container(
+          color: Colors.grey[300],
+          child: const Center(child: Icon(Icons.image, size: 50)),
+        ),
+      );
     }
   }
 
@@ -809,12 +834,12 @@ class _IdentifyPictureScreenState extends State<IdentifyPictureScreen> {
                 ),
               ),
 
-            // NEW ANIMATED TUTORIAL OVERLAY FOR IDENTIFY PICTURE
+            // ANIMATED TUTORIAL OVERLAY FOR IDENTIFY PICTURE
             if (_showTutorial)
               ActivityGameTutorialOverlay(
                 onComplete: () {
                   setState(() {
-                    _showTutorial = false; // Closes the tutorial properly
+                    _showTutorial = false;
                   });
                 },
               ),

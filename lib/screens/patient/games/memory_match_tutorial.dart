@@ -18,8 +18,8 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
   final Color _inkSoft = const Color(0xFF5B6A61);
   final Color _border = const Color(0xFFD8E2D9);
 
-  // 4 Fixed Cards for Tutorial (2 Carrots, 2 Bananas)
-  final List<Map<String, String>> _tutorialCards = [
+  // 4 Fixed Cards for Tutorial (2 Carrots, 2 Bananas) directly from local offline assets
+  final List<Map<String, String>> _tutorialCards = const [
     {'name': 'Carrot', 'image': 'assets/memory_matching/fruits/carrot.jpg'},
     {'name': 'Banana', 'image': 'assets/memory_matching/fruits/banana.jpg'},
     {'name': 'Banana', 'image': 'assets/memory_matching/fruits/banana.jpg'},
@@ -247,7 +247,8 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
-                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.grey),
+                                      errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.image_not_supported, color: Colors.grey),
                                     ),
                                   )
                                       : const Text(
@@ -323,13 +324,12 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
                       ],
                     ),
                   ),
-                // Removed the Play Game Now from here, since we are moving it to the popup
                 if (isCompleted)
-                  const SizedBox(height: 60), // Just to keep spacing
+                  const SizedBox(height: 60),
               ],
             ),
 
-            // WELCOME POPUP DIALOG (Ask user to start tutorial before playing)
+            // WELCOME POPUP DIALOG
             if (_showWelcomeDialog)
               Container(
                 color: Colors.black.withValues(alpha: 0.6),
@@ -367,12 +367,12 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
                             backgroundColor: _marigold,
                             foregroundColor: _white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             elevation: 0,
                           ),
                           onPressed: () {
                             setState(() {
-                              _showWelcomeDialog = false; // Close popup and start tutorial
+                              _showWelcomeDialog = false;
                             });
                           },
                           child: const Text('Start Tutorial', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
@@ -383,10 +383,10 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
                 ),
               ),
 
-            // 5. POST-TUTORIAL (FINAL COMPLETION POPUP)
+            // POST-TUTORIAL (FINAL COMPLETION POPUP)
             if (isCompleted)
               Container(
-                color: Colors.black.withValues(alpha: 0.75), // Dark background
+                color: Colors.black.withValues(alpha: 0.75),
                 width: double.infinity,
                 height: double.infinity,
                 child: Center(
@@ -444,7 +444,6 @@ class _MemoryMatchTutorialScreenState extends State<MemoryMatchTutorialScreen> w
                   ),
                 ),
               ),
-
           ],
         ),
       ),

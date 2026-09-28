@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import '../../api_service.dart';
 import 'videos_library_screen.dart'; // Import videos library screen
 
 class PatientHomeScreen extends StatefulWidget {
@@ -28,6 +32,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSavedUserData();
+    _syncEmergencyContactToLocal();
     _updateTimeAndGreeting();
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (mounted) {
@@ -36,11 +42,59 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     });
   }
 
+  // Database / SharedPreferences se logged-in user details load karein
+  Future<void> _loadSavedUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedName = prefs.getString('savedUsername') ?? prefs.getString('full_name');
+    if (savedName != null && savedName.isNotEmpty && mounted) {
+      setState(() {
+        _userName = savedName;
+      });
+    }
+  }
+
+  // Backend se user profile aur emergency_contact local SharedPreferences mein sync karein
+  Future<void> _syncEmergencyContactToLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId') ?? prefs.getString('userId');
+      final token = prefs.getString('token');
+
+      if (userId == null) return;
+
+      final url = Uri.parse('${ApiService.baseUrl}/user/$userId');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final dynamic fetchedContact = data['emergency_contact'] ??
+            data['user']?['emergency_contact'] ??
+            data['profile']?['emergency_contact'];
+
+        if (fetchedContact != null) {
+          final String contactStr = fetchedContact.toString().trim();
+          if (contactStr.isNotEmpty) {
+            await prefs.setString('savedEmergencyContact', contactStr);
+            await prefs.setString('emergency_contact', contactStr);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Emergency contact sync error: $e");
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args != null && args is String) {
+    if (args != null && args is String && args.isNotEmpty) {
       _userName = args;
     }
   }
@@ -85,6 +139,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
+          color: Color(0xFFF3F6F0),
           image: DecorationImage(
             image: AssetImage('assets/1.jpg'),
             fit: BoxFit.cover,
@@ -161,7 +216,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             Navigator.pushNamed(context, '/activity');
                           }),
                           const SizedBox(height: 16),
-                          // Updated Videos Card to open VideosLibraryScreen directly
+                          // Videos Card to open VideosLibraryScreen directly
                           _buildActionCard('Videos', 'assets/videos.jpeg', () {
                             Navigator.push(
                               context,
@@ -170,7 +225,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           }),
                           const SizedBox(height: 16),
                           _buildActionCard('Family', 'assets/family.jpeg', () {
-                            // Yeh line seedha aapko Family Emergency Screen par le jayegi
                             Navigator.pushNamed(context, '/family');
                           }),
                         ],
@@ -246,7 +300,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               Positioned(
                 bottom: 24, left: 24, right: 24,
                 child: GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/emergency'),
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    final directContact = prefs.getString('savedEmergencyContact') ??
+                        prefs.getString('emergency_contact');
+                    if (context.mounted) {
+                      Navigator.pushNamed(context, '/emergency', arguments: directContact);
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -338,7 +399,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             image: AssetImage(imagePath),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.15), BlendMode.darken),
-            onError: (exception, stackTrace) => debugPrint('Image not found: $imagePath'),
           ),
         ),
         child: Container(
@@ -346,7 +406,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(colors: [Colors.black.withValues(alpha: 0.4), Colors.transparent], begin: Alignment.centerLeft, end: Alignment.centerRight),
+            gradient: LinearGradient(
+              colors: [Colors.black.withValues(alpha: 0.4), Colors.transparent],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
           ),
           child: Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
         ),
@@ -367,13 +431,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           image: DecorationImage(
             image: AssetImage(imagePath),
             fit: BoxFit.cover,
-            onError: (exception, stackTrace) => debugPrint('Image not found: $imagePath'),
           ),
         ),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+            gradient: LinearGradient(
+              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
           alignment: Alignment.bottomCenter,
           child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),

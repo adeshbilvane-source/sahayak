@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../api_service.dart';
 
 class PatientLoginScreen extends StatefulWidget {
   const PatientLoginScreen({super.key});
@@ -15,6 +16,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
   final Color _accentOrange = const Color(0xFFE67E22);
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -35,32 +37,79 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
+    setState(() => _isLoading = true);
 
-    // Fetch registered details from SharedPreferences
-    String? savedIdentifier = prefs.getString('savedIdentifier');
-    String? savedPassword = prefs.getString('savedPassword');
-    String? savedUsername = prefs.getString('savedUsername');
+    try {
+      final res = await ApiService.login(
+        identifier: identifier,
+        password: password,
+      );
 
-    // Hardcoded Dummy Admin or Registered User matching
-    bool isDummyAdmin = identifier == '7020345968' && password == '123456';
-    bool isRegisteredUser = (identifier == savedIdentifier && password == savedPassword);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    if (isDummyAdmin || isRegisteredUser) {
-      // Mark as permanently logged in
-      await prefs.setBool('isLoggedIn', true);
-      String loggedInName = isDummyAdmin ? 'Adesh' : (savedUsername ?? 'User');
+      if (res['token'] != null) {
+        final userData = res['user'] ?? {};
+        String role = userData['role'] ?? '';
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/patient_home', arguments: loggedInName);
+        if (role != 'patient') {
+          _showError('This account is registered as Doctor. Please use Doctor Login.');
+          return;
+        }
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('token', res['token']);
+
+        final dynamic rawUserId = userData['id'] ?? userData['user_id'];
+        if (rawUserId != null) {
+          await prefs.setInt('userId', int.tryParse(rawUserId.toString()) ?? 0);
+        }
+
+        await prefs.setString('savedPhone', userData['phone_number']?.toString() ?? '');
+
+        // Backend response me se dynamically Name nikalna
+        final dynamic rawName = userData['profile']?['full_name'] ??
+            userData['full_name'] ??
+            'User';
+        String loggedInName = rawName.toString();
+        await prefs.setString('savedUsername', loggedInName);
+        await prefs.setString('full_name', loggedInName);
+
+        // Backend response me se dynamically Emergency Number nikalna
+        final dynamic rawEmergency = userData['profile']?['emergency_contact'] ??
+            userData['emergency_contact'];
+
+        if (rawEmergency != null && rawEmergency.toString().trim().isNotEmpty) {
+          String contactStr = rawEmergency.toString().trim();
+          // Har possible key me save kar diya taaki emergency screen ko turant mil jaye
+          await prefs.setString('savedEmergencyContact', contactStr);
+          await prefs.setString('emergency_contact', contactStr);
+          await prefs.setString('savedEmergency', contactStr);
+        }
+
+        final dynamic rawBlood = userData['profile']?['blood_group'] ?? userData['blood_group'];
+        if (rawBlood != null) {
+          await prefs.setString('savedBloodGroup', rawBlood.toString());
+        }
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/patient_home', arguments: loggedInName);
+        }
+      } else {
+        _showError(res['error'] ?? 'Incorrect credentials!');
       }
-    } else {
-      _showError('Incorrect Email/Mobile or Password!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError('Connection error: $e');
     }
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -149,7 +198,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType.text,
                         decoration: InputDecoration(
                           hintText: '+91 **********',
                           prefixIcon: Icon(Icons.smartphone_outlined, color: _ink),
@@ -193,13 +242,15 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _submitLogin,
+                    onPressed: _isLoading ? null : _submitLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _green,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
                     ),
-                    child: const Row(
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('Login', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),

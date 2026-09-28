@@ -66,6 +66,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
 
   int _sessionStartMillis = DateTime.now().millisecondsSinceEpoch;
 
+  // Offline local asset datasets
   final Map<CategoryType, List<CardItem>> _realDatasets = {
     CategoryType.fruits: [
       CardItem(id: 'f1', name: 'Apple', image: 'assets/memory_matching/fruits/apple.jpg'),
@@ -73,7 +74,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       CardItem(id: 'f3', name: 'Carrot', image: 'assets/memory_matching/fruits/carrot.jpg'),
       CardItem(id: 'f4', name: 'Cherry', image: 'assets/memory_matching/fruits/cherry.jpg'),
       CardItem(id: 'f5', name: 'Grapes', image: 'assets/memory_matching/fruits/grapes.jpg'),
-      CardItem(id: 'f6', name: 'Kiwi', image: 'assets/memory_matching/fruits/kivi.jpg'), // Fixed typo here
+      CardItem(id: 'f6', name: 'Kiwi', image: 'assets/memory_matching/fruits/kivi.jpg'),
       CardItem(id: 'f7', name: 'Lemon', image: 'assets/memory_matching/fruits/lemon.jpg'),
       CardItem(id: 'f8', name: 'Mango', image: 'assets/memory_matching/fruits/mango.jpg'),
       CardItem(id: 'f9', name: 'Onion', image: 'assets/memory_matching/fruits/onion.jpg'),

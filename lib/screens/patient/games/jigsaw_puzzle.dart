@@ -12,15 +12,16 @@ class PuzzleImage {
   PuzzleImage({required this.id, required this.name, required this.url});
 }
 
+// Offline local asset images
 final List<PuzzleImage> _puzzleImages = [
   PuzzleImage(id: 'img1', name: 'Colorful Umbrellas', url: 'assets/jigsaw_images/01.jpg'),
   PuzzleImage(id: 'img2', name: 'Indian Spices', url: 'assets/jigsaw_images/02.jpg'),
   PuzzleImage(id: 'img3', name: 'Balloon Festival', url: 'assets/jigsaw_images/03.jpg'),
   PuzzleImage(id: 'img4', name: 'Macaw Parrot', url: 'assets/jigsaw_images/04.jpg'),
-  PuzzleImage(id: 'img5', name: 'Colorful Rangoli', url: 'assets/jigsaw_images/05.jpg'),
-  PuzzleImage(id: 'img6', name: 'Vintage Yellow Car', url: 'assets/jigsaw_images/06.jpg'),
+  PuzzleImage(id: 'img5', name: 'Colorful Rangoli', url: 'assets/jigsaw_images/05.jpeg'),
+  PuzzleImage(id: 'img6', name: 'Vintage Yellow Car', url: 'assets/jigsaw_images/06.jpeg'),
   PuzzleImage(id: 'img7', name: 'Fresh Fruit Basket', url: 'assets/jigsaw_images/07.jpg'),
-  PuzzleImage(id: 'img8', name: 'Decorated Elephant', url: 'assets/jigsaw_images/08.jpg'),
+  PuzzleImage(id: 'img8', name: 'Decorated Elephant', url: 'assets/jigsaw_images/08.jpeg'),
   PuzzleImage(id: 'img9', name: 'Autumn Leaves', url: 'assets/jigsaw_images/09.jpg'),
   PuzzleImage(id: 'img10', name: 'Colorful Boats', url: 'assets/jigsaw_images/10.jpg'),
   PuzzleImage(id: 'img11', name: 'Traditional Tea Cups', url: 'assets/jigsaw_images/11.jpg'),
@@ -278,7 +279,10 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
               children: [
                 const Text('🎉', style: TextStyle(fontSize: 60)),
                 const SizedBox(height: 16),
-                Text(_isTutorialMode ? 'Tutorial Completed!' : 'Congratulations!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _green)),
+                Text(
+                  _isTutorialMode ? 'Tutorial Completed!' : 'Congratulations!',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _green),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   _isTutorialMode
@@ -312,7 +316,10 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                         _initPuzzle();
                       }
                     },
-                    child: Text(_isTutorialMode ? 'Play My Level' : 'Go to Next Level', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                    child: Text(
+                      _isTutorialMode ? 'Play My Level' : 'Go to Next Level',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
               ],
@@ -376,7 +383,7 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Tutorial mode check - Pass the image data to the overlay!
+    // 1. Tutorial mode check
     if (_showTutorial) {
       return JigsawTutorialOverlay(
         imageUrl: _activeImage.url,
@@ -384,7 +391,7 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
         rows: _rows,
         onComplete: () {
           setState(() {
-            _showTutorial = false; // Tutorial band, actual practice mode shuru
+            _showTutorial = false;
           });
           _resetIdleTimer();
         },
@@ -534,10 +541,16 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                                           return Container(
                                             decoration: BoxDecoration(
                                               border: Border.all(
-                                                  color: isSelected ? _marigold : (showHintGlow ? _blueHint : _white.withValues(alpha: 0.4)),
-                                                  width: isSelected || showHintGlow ? 3.5 : 0.5
+                                                color: isSelected
+                                                    ? _marigold
+                                                    : (showHintGlow ? _blueHint : _white.withValues(alpha: 0.4)),
+                                                width: isSelected || showHintGlow ? 3.5 : 0.5,
                                               ),
-                                              color: candidateData.isNotEmpty || isSelected || showHintGlow ? (showHintGlow ? _blueHint.withValues(alpha: 0.3) : _marigoldTint.withValues(alpha: 0.6)) : Colors.transparent,
+                                              color: candidateData.isNotEmpty || isSelected || showHintGlow
+                                                  ? (showHintGlow
+                                                  ? _blueHint.withValues(alpha: 0.3)
+                                                  : _marigoldTint.withValues(alpha: 0.6))
+                                                  : Colors.transparent,
                                             ),
                                             child: hasPiece
                                                 ? Draggable<Map<String, int>>(
@@ -546,7 +559,9 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                                               childWhenDragging: Opacity(opacity: 0.3, child: _buildStaticPiece(_placedPieces[slotIndex]!)),
                                               child: _buildStaticPiece(_placedPieces[slotIndex]!),
                                             )
-                                                : Center(child: Icon(Icons.add, color: showHintGlow ? _blueHint : _white.withValues(alpha: 0.4), size: 24)),
+                                                : Center(
+                                              child: Icon(Icons.add, color: showHintGlow ? _blueHint : _white.withValues(alpha: 0.4), size: 24),
+                                            ),
                                           );
                                         },
                                       ),
@@ -567,10 +582,15 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                _isTutorialMode ? 'Practice Mode - Place pieces correctly.' :
-                                _isWon ? 'Perfect! Next level coming...' :
-                                _hintPiece != null ? 'Hint: Move the blue piece to the blue box!' :
-                                _selectedPiece != null ? 'Tap an empty box to drop' : 'Drag or Tap a piece to move',
+                                _isTutorialMode
+                                    ? 'Practice Mode - Place pieces correctly.'
+                                    : _isWon
+                                    ? 'Perfect! Next level coming...'
+                                    : _hintPiece != null
+                                    ? 'Hint: Move the blue piece to the blue box!'
+                                    : _selectedPiece != null
+                                    ? 'Tap an empty box to drop'
+                                    : 'Drag or Tap a piece to move',
                                 style: TextStyle(fontWeight: FontWeight.w900, color: _hintPiece != null ? _blueHint : _inkSoft, fontSize: 12),
                               ),
                             ),
@@ -623,40 +643,40 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                         child: GestureDetector(
                           onTap: _handleTrayBackgroundTap,
                           child: DragTarget<Map<String, int>>(
-                              onWillAcceptWithDetails: (details) => true,
-                              onAcceptWithDetails: (details) => _handlePieceMove(details.data, -1),
-                              builder: (context, candidateData, rejectedData) {
-                                return Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: candidateData.isNotEmpty ? _marigoldTint.withValues(alpha: 0.3) : _white,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                                    boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, -5))],
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: Wrap(
-                                      spacing: 12,
-                                      runSpacing: 12,
-                                      alignment: WrapAlignment.center,
-                                      children: _poolPieces.map((pieceIndex) {
-                                        final isSelected = _selectedPiece != null && _selectedPiece!['source'] == -1 && _selectedPiece!['piece'] == pieceIndex;
-                                        final isHint = _hintPiece == pieceIndex && _poolPieces.contains(pieceIndex);
+                            onWillAcceptWithDetails: (details) => true,
+                            onAcceptWithDetails: (details) => _handlePieceMove(details.data, -1),
+                            builder: (context, candidateData, rejectedData) {
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: candidateData.isNotEmpty ? _marigoldTint.withValues(alpha: 0.3) : _white,
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                                  boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, -5))],
+                                ),
+                                child: SingleChildScrollView(
+                                  child: Wrap(
+                                    spacing: 12,
+                                    runSpacing: 12,
+                                    alignment: WrapAlignment.center,
+                                    children: _poolPieces.map((pieceIndex) {
+                                      final isSelected = _selectedPiece != null && _selectedPiece!['source'] == -1 && _selectedPiece!['piece'] == pieceIndex;
+                                      final isHint = _hintPiece == pieceIndex && _poolPieces.contains(pieceIndex);
 
-                                        return GestureDetector(
-                                          onTap: () => _handleTrayPieceTap(pieceIndex),
-                                          child: Draggable<Map<String, int>>(
-                                            data: {'piece': pieceIndex, 'source': -1},
-                                            feedback: Material(color: Colors.transparent, child: _buildDraggedPiece(pieceIndex)),
-                                            childWhenDragging: Opacity(opacity: 0.2, child: _buildTrayPiece(pieceIndex, isSelected, isHint)),
-                                            child: _buildTrayPiece(pieceIndex, isSelected, isHint),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
+                                      return GestureDetector(
+                                        onTap: () => _handleTrayPieceTap(pieceIndex),
+                                        child: Draggable<Map<String, int>>(
+                                          data: {'piece': pieceIndex, 'source': -1},
+                                          feedback: Material(color: Colors.transparent, child: _buildDraggedPiece(pieceIndex)),
+                                          childWhenDragging: Opacity(opacity: 0.2, child: _buildTrayPiece(pieceIndex, isSelected, isHint)),
+                                          child: _buildTrayPiece(pieceIndex, isSelected, isHint),
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
-                                );
-                              }
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -678,10 +698,19 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
                             children: [
                               Text('Target Picture', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _ink)),
                               const SizedBox(height: 16),
-                              ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.asset(_activeImage.url, fit: BoxFit.cover)),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.asset(_activeImage.url, fit: BoxFit.cover),
+                              ),
                               const SizedBox(height: 20),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12), elevation: 0),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _green,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                  elevation: 0,
+                                ),
                                 onPressed: () {
                                   setState(() => _showPreview = false);
                                   _resetIdleTimer();
@@ -705,12 +734,17 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
   // Helpers
   Widget _buildTrayPiece(int pieceIndex, bool isSelected, bool isHint) {
     return Container(
-      width: 75, height: 75,
+      width: 75,
+      height: 75,
       decoration: BoxDecoration(
         color: _white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isSelected ? _marigold : (isHint ? _blueHint : Colors.transparent), width: isSelected || isHint ? 4 : 0),
-        boxShadow: isSelected ? [BoxShadow(color: _marigold.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))] : isHint ? [BoxShadow(color: _blueHint.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 4))] : const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        boxShadow: isSelected
+            ? [BoxShadow(color: _marigold.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))]
+            : isHint
+            ? [BoxShadow(color: _blueHint.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 4))]
+            : const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(8), child: ImageSlice(imageUrl: _activeImage.url, cols: _cols, rows: _rows, sliceIndex: pieceIndex)),
     );
@@ -722,7 +756,8 @@ class _JigsawPuzzleScreenState extends State<JigsawPuzzleScreen> {
 
   Widget _buildDraggedPiece(int pieceIndex) {
     return Container(
-      width: 85, height: 85,
+      width: 85,
+      height: 85,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 15, offset: Offset(0, 8))]),
       child: ClipRRect(borderRadius: BorderRadius.circular(8), child: ImageSlice(imageUrl: _activeImage.url, cols: _cols, rows: _rows, sliceIndex: pieceIndex)),
     );
@@ -751,7 +786,20 @@ class ImageSlice extends StatelessWidget {
         return ClipRect(
           child: Stack(
             children: [
-              Positioned(left: -offsetX, top: -offsetY, width: imageW, height: imageH, child: Image.asset(imageUrl, fit: BoxFit.cover)),
+              Positioned(
+                left: -offsetX,
+                top: -offsetY,
+                width: imageW,
+                height: imageH,
+                child: Image.asset(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.broken_image, size: 24, color: Colors.grey),
+                  ),
+                ),
+              ),
             ],
           ),
         );

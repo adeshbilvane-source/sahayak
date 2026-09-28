@@ -8,13 +8,11 @@ class YogaStep {
   final int stepNumber;
   final String title;
   final String instruction;
-  final int durationSec;
 
   YogaStep({
     required this.stepNumber,
     required this.title,
     required this.instruction,
-    required this.durationSec,
   });
 }
 
@@ -42,7 +40,6 @@ class YogaPose {
 
 // Total 10 Yoga Poses mapped with exact folder image filenames (.jpg)
 final List<YogaPose> yogaPosesList = [
-
   YogaPose(
     id: 'tadasana',
     name: 'Mountain Pose',
@@ -52,8 +49,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A steady, grounding standing posture that improves posture, balance, and quiet focus for seniors.',
     benefits: 'Improves posture, strengthens thighs and ankles, reduces flat feet symptoms.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Feet Alignment & Foundation', instruction: 'Stand tall with feet hip-width apart.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Lengthen Spine & Relax Arms', instruction: 'Let your arms hang comfortably by your sides.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Feet Alignment & Foundation', instruction: 'Stand tall with feet hip-width apart.'),
+      YogaStep(stepNumber: 2, title: 'Lengthen Spine & Relax Arms', instruction: 'Let your arms hang comfortably by your sides.'),
     ],
   ),
   // 2. Vrikshasana (tree_pose.jpg)
@@ -66,8 +63,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A gentle balance-building pose practiced with a wall or chair for safe, fall-free stability.',
     benefits: 'Enhances neuromuscular coordination, strengthens calves.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Steady Stand by Wall/Chair', instruction: 'Stand upright near a sturdy wall or chair.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Place Foot on Ankle', instruction: 'Place the sole of your foot against your ankle.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Steady Stand by Wall/Chair', instruction: 'Stand upright near a sturdy wall or chair.'),
+      YogaStep(stepNumber: 2, title: 'Place Foot on Ankle', instruction: 'Place the sole of your foot against your ankle.'),
     ],
   ),
   // 3. Virabhadrasana I (virabhadrasana_i.jpg)
@@ -80,8 +77,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A powerful standing posture that builds stamina, strength, and focus.',
     benefits: 'Strengthens shoulders, arms, legs, back and ankles.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Stance Setup', instruction: 'Step feet wide apart, turn front foot out and bend front knee.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Reach Arms Up', instruction: 'Raise arms overhead and gaze gently upward.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Stance Setup', instruction: 'Step feet wide apart, turn front foot out and bend front knee.'),
+      YogaStep(stepNumber: 2, title: 'Reach Arms Up', instruction: 'Raise arms overhead and gaze gently upward.'),
     ],
   ),
   // 4. Bhujangasan (bhujangasan.jpg)
@@ -94,8 +91,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A prone backbend that stretches chest muscles and strengthens the spine.',
     benefits: 'Improves posture, strengthens the spine, and opens the chest.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Lie on Abdomen', instruction: 'Lie face down with palms flat under your shoulders.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Lift Chest', instruction: 'Inhale and gently lift your chest off the floor.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Lie on Abdomen', instruction: 'Lie face down with palms flat under your shoulders.'),
+      YogaStep(stepNumber: 2, title: 'Lift Chest', instruction: 'Inhale and gently lift your chest off the floor.'),
     ],
   ),
   // 5. Anjaneyasana (anjaneyasana.jpg)
@@ -108,8 +105,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A deep lunge stretch that opens hips and stretches thighs.',
     benefits: 'Stretches hips, thighs, and groins; builds core stability.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Kneeling Lunge', instruction: 'Step one foot forward into a lunge, back knee on floor.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Raise Arms', instruction: 'Inhale and sweep your arms up toward the sky.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Kneeling Lunge', instruction: 'Step one foot forward into a lunge, back knee on floor.'),
+      YogaStep(stepNumber: 2, title: 'Raise Arms', instruction: 'Inhale and sweep your arms up toward the sky.'),
     ],
   ),
   // 6. Paschimottanasana (paschimottanasana.jpg)
@@ -122,8 +119,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A calming stretch for the entire back body.',
     benefits: 'Calms the brain and helps relieve stress and mild depression.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Sit with Legs Extended', instruction: 'Sit tall with legs straight out in front.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Fold Forward', instruction: 'Hinge from hips and reach for your feet or shins.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Sit with Legs Extended', instruction: 'Sit tall with legs straight out in front.'),
+      YogaStep(stepNumber: 2, title: 'Fold Forward', instruction: 'Hinge from hips and reach for your feet or shins.'),
     ],
   ),
   // 7. Adho Mukha Svanasana (adho_mukha_svanasana.jpg)
@@ -136,8 +133,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'An energizing inversion that stretches shoulders, hamstrings, and calves.',
     benefits: 'Energizes the body, stretches shoulders, hamstrings, calves, and hands.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Tabletop Position', instruction: 'Start on hands and knees.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Lift Hips', instruction: 'Press into hands and lift hips up, forming an inverted V shape.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Tabletop Position', instruction: 'Start on hands and knees.'),
+      YogaStep(stepNumber: 2, title: 'Lift Hips', instruction: 'Press into hands and lift hips up, forming an inverted V shape.'),
     ],
   ),
   // 8. Setu Bandhasana (setu_bandhasana.jpg)
@@ -150,8 +147,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A gentle backbend that opens the chest and stretches the neck and spine.',
     benefits: 'Strengthens glutes, back muscles, and improves blood circulation.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Lie on Back', instruction: 'Lie on your back with knees bent and feet flat on the floor.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Lift Hips Up', instruction: 'Press feet down and lift hips toward the ceiling.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Lie on Back', instruction: 'Lie on your back with knees bent and feet flat on the floor.'),
+      YogaStep(stepNumber: 2, title: 'Lift Hips Up', instruction: 'Press feet down and lift hips toward the ceiling.'),
     ],
   ),
   // 9. Supta Matsyendrasana (supta_matsyendrasana.jpg)
@@ -164,8 +161,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A relaxing reclining twist that releases tension in the lower back and spine.',
     benefits: 'Relieves back tension, stretches glutes and spine, aids digestion.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Lie Down & Hug Knees', instruction: 'Lie on back, bring knees to chest.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Drop Knees to Side', instruction: 'Gently drop both knees to one side while looking opposite way.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Lie Down & Hug Knees', instruction: 'Lie on back, bring knees to chest.'),
+      YogaStep(stepNumber: 2, title: 'Drop Knees to Side', instruction: 'Gently drop both knees to one side while looking opposite way.'),
     ],
   ),
   // 10. Baddha Konasana (baddha_konasana.jpg)
@@ -178,8 +175,8 @@ final List<YogaPose> yogaPosesList = [
     description: 'A seated posture that opens hips and inner thighs.',
     benefits: 'Stimulates abdominal organs, improves circulation, relieves fatigue.',
     steps: [
-      YogaStep(stepNumber: 1, title: 'Soles Together', instruction: 'Sit tall, bend knees and bring soles of feet together.', durationSec: 20),
-      YogaStep(stepNumber: 2, title: 'Hold Feet & Relax Knees', instruction: 'Hold your feet with hands and gently let knees drop toward floor.', durationSec: 20),
+      YogaStep(stepNumber: 1, title: 'Soles Together', instruction: 'Sit tall, bend knees and bring soles of feet together.'),
+      YogaStep(stepNumber: 2, title: 'Hold Feet & Relax Knees', instruction: 'Hold your feet with hands and gently let knees drop toward floor.'),
     ],
   ),
 ];
@@ -196,8 +193,6 @@ class _YogaPageState extends State<YogaPage> {
   bool showDetailView = false;
   bool isGuiding = false;
   int currentStepIdx = 0;
-  int timerSeconds = 20;
-  Timer? timerRef;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
@@ -220,7 +215,6 @@ class _YogaPageState extends State<YogaPage> {
 
   @override
   void dispose() {
-    timerRef?.cancel();
     _hideControlsTimer?.cancel();
     _videoController?.dispose();
     super.dispose();
@@ -289,47 +283,15 @@ class _YogaPageState extends State<YogaPage> {
     await prefs.setInt('yoga_total_sessions', totalSessions + 1);
   }
 
-  void startTimer() {
-    timerRef?.cancel();
-    final currentStep = selectedPose.steps[currentStepIdx];
-    setState(() {
-      timerSeconds = currentStep.durationSec;
-    });
-
-    timerRef = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (timerSeconds <= 1) {
-        if (currentStepIdx < selectedPose.steps.length - 1) {
-          setState(() {
-            currentStepIdx++;
-            timerSeconds = selectedPose.steps[currentStepIdx].durationSec;
-          });
-        } else {
-          timer.cancel();
-          handleStopSession();
-          saveYogaSessionToAnalytics(1);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🎉 Session complete! Logged to your daily health report.')),
-          );
-        }
-      } else {
-        setState(() {
-          timerSeconds--;
-        });
-      }
-    });
-  }
-
   void handleStartSession() {
     setState(() {
       currentStepIdx = 0;
       isGuiding = true;
     });
     _initializeVideo(selectedPose.localVideoPath);
-    startTimer();
   }
 
   void handleStopSession() {
-    timerRef?.cancel();
     _hideControlsTimer?.cancel();
     _videoController?.pause();
     setState(() {
@@ -460,26 +422,18 @@ class _YogaPageState extends State<YogaPage> {
                     child: Column(
                       children: [
                         Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(color: purpleTint, borderRadius: BorderRadius.circular(14)),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Step ${selectedPose.steps[currentStepIdx].stepNumber} of ${selectedPose.steps.length}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: purpleColor),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                                child: Text('⏱ ${timerSeconds}s', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: purpleColor)),
-                              ),
-                            ],
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Step ${selectedPose.steps[currentStepIdx].stepNumber} of ${selectedPose.steps.length}',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: purpleColor),
                           ),
                         ),
                         const SizedBox(height: 14),
 
-                        // YouTube Style Video Player with Tap-to-Toggle and Auto-Hide Play Button
+                        // Video Player with Tap-to-Toggle and Auto-Hide Play Button
                         GestureDetector(
                           onTap: _onVideoTap,
                           child: Stack(
@@ -555,11 +509,13 @@ class _YogaPageState extends State<YogaPage> {
                                   if (currentStepIdx < selectedPose.steps.length - 1) {
                                     setState(() {
                                       currentStepIdx++;
-                                      timerSeconds = selectedPose.steps[currentStepIdx].durationSec;
                                     });
                                   } else {
                                     handleStopSession();
                                     saveYogaSessionToAnalytics(1);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('🎉 Session complete! Logged to your daily health report.')),
+                                    );
                                   }
                                 },
                                 child: Text(
