@@ -57,17 +57,17 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
 
     // Validations
     if (username.isEmpty || phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showError('Username, Mobile Number aur Password zaroori hain!');
+      _showError('Username, Mobile Number aur Password is mandatory!');
       return;
     }
 
     if (emergency.isEmpty) {
-      _showError('Family Emergency Contact Number daalna zaroori hai!');
+      _showError('Family Emergency Contact Number is mandatory!');
       return;
     }
 
     if (password != confirmPassword) {
-      _showError('Passwords match nahi kar rahe!');
+      _showError('Passwords is not matching!');
       return;
     }
 
@@ -91,10 +91,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      // Agar account successfully ban gaya
       if (res['user_id'] != null || res['message'] != null || res['token'] != null) {
-        // YAHAN KOI BHI SESSION YA USER DATA SAVE NAHI HOGA
-        // User ko manual login karna hoga
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account successfully ban gaya! Kripya apna mobile number aur password dalkar login karein.'),
@@ -103,12 +100,12 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
         );
         Navigator.pop(context);
       } else {
-        _showError(res['error'] ?? 'Registration fail ho gaya.');
+        _showError(res['error'] ?? 'Registration is fail.');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showError('Server se connect nahi ho paya: $e');
+      _showError(' failed to connecting the Server. Error: $e');
     }
   }
 
@@ -118,13 +115,13 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     );
   }
 
-  InputDecoration _inputDecor({required String hint, required IconData icon}) {
+  InputDecoration _inputDecor({required String hint, required IconData icon, EdgeInsetsGeometry? contentPadding}) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: _ink),
+      prefixIcon: Icon(icon, color: _ink, size: 20),
       filled: true,
       fillColor: const Color(0xFFF7F9F6),
-      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
     );
@@ -155,14 +152,22 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(color: _green.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: Icon(Icons.hub, size: 36, color: _green),
+              // Sahayak Logo (Circular Image)
+              ClipOval(
+                child: Image.asset(
+                  'assets/sahayak_logo.png',
+                  width: 90,
+                  height: 90,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Icon(Icons.hub, size: 48, color: _green),
+                ),
               ),
               const SizedBox(height: 8),
-              Text('SAHAYAK', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: _accentOrange)),
+              Text(
+                'SAHAYAK',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: _accentOrange),
+              ),
               const SizedBox(height: 20),
 
               Align(
@@ -221,8 +226,9 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                     // Age & Gender Row
                     Row(
                       children: [
-                        // Age
+                        // Age (Flex 2)
                         Expanded(
+                          flex: 2,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -231,15 +237,20 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                               TextField(
                                 controller: _ageController,
                                 keyboardType: TextInputType.number,
-                                decoration: _inputDecor(hint: 'e.g. 65', icon: Icons.cake_outlined),
+                                decoration: _inputDecor(
+                                  hint: 'Age',
+                                  icon: Icons.cake_outlined,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
 
-                        // Gender Dropdown
+                        // Gender Dropdown (Flex 3)
                         Expanded(
+                          flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -247,8 +258,18 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                               const SizedBox(height: 6),
                               DropdownButtonFormField<String>(
                                 initialValue: _selectedGender,
-                                decoration: _inputDecor(hint: 'Select', icon: Icons.wc_outlined),
-                                items: _genders.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                                isExpanded: true,
+                                decoration: _inputDecor(
+                                  hint: 'Select',
+                                  icon: Icons.wc_outlined,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                                ),
+                                items: _genders
+                                    .map((g) => DropdownMenuItem(
+                                  value: g,
+                                  child: Text(g, overflow: TextOverflow.ellipsis),
+                                ))
+                                    .toList(),
                                 onChanged: (val) => setState(() => _selectedGender = val),
                               ),
                             ],
@@ -263,8 +284,14 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: _selectedBloodGroup,
+                      isExpanded: true,
                       decoration: _inputDecor(hint: 'Select blood group', icon: Icons.bloodtype_outlined),
-                      items: _bloodGroups.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                      items: _bloodGroups
+                          .map((b) => DropdownMenuItem(
+                        value: b,
+                        child: Text(b),
+                      ))
+                          .toList(),
                       onChanged: (val) => setState(() => _selectedBloodGroup = val),
                     ),
                     const SizedBox(height: 16),

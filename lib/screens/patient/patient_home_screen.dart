@@ -4,7 +4,8 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../api_service.dart';
-import 'videos_library_screen.dart'; // Import videos library screen
+import 'videos_library_screen.dart';
+import 'reminders_screen.dart'; // Reminders Screen Import
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -216,7 +217,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             Navigator.pushNamed(context, '/activity');
                           }),
                           const SizedBox(height: 16),
-                          // Videos Card to open VideosLibraryScreen directly
                           _buildActionCard('Videos', 'assets/videos.jpeg', () {
                             Navigator.push(
                               context,
@@ -238,7 +238,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           setState(() {
                             _showAllFeatures = !_showAllFeatures;
                           });
-                          // Dynamic scroll animation when opening features
                           if (_showAllFeatures) {
                             Future.delayed(const Duration(milliseconds: 100), () {
                               if (_scrollController.hasClients) {
@@ -272,19 +271,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
                         child: Row(
                           children: [
+                            // 1. Reminders Button (One-Press to Open RemindersScreen)
                             Expanded(
                               child: _buildGridCard('Reminders', 'assets/reminder.png', () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Reminders feature coming soon!')),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RemindersScreen()),
                                 );
                               }),
                             ),
                             const SizedBox(width: 12),
+                            // 2. Appointments Button
                             Expanded(
                               child: _buildGridCard('Appointments', 'assets/appointment.png', () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Appointments feature coming soon!')),
-                                );
+                                Navigator.pushNamed(context, '/caregivers_schedule');
                               }),
                             ),
                           ],

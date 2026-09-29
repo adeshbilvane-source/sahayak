@@ -18,6 +18,7 @@ import 'screens/patient/edit_profile_screen.dart';
 import 'screens/patient/activity_screen.dart';
 import 'screens/patient/videos_library_screen.dart';
 import 'screens/patient/family_emergency_screen.dart';
+import 'screens/patient/caregivers_schedule_screen.dart';
 
 // Games Screens
 import 'screens/patient/games/button_sorting.dart';
@@ -79,6 +80,7 @@ class NeuroNestApp extends StatelessWidget {
         '/memory_match': (context) => const MemoryMatchScreen(),
         '/jigsaw_puzzle': (context) => const JigsawPuzzleScreen(),
         '/family': (context) => const FamilyEmergencyScreen(),
+        '/caregivers_schedule': (context) => const CaregiversScheduleScreen(),
       },
     );
   }

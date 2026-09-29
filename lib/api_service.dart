@@ -4,20 +4,43 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Laptop ka exact IPv4 Address
-  static const String myLaptopIp = '10.86.88.126';
+  // Aapka current laptop IP
+  static const String myLaptopIp = '10.184.82.126';
 
+  // Base URL helper
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:5000/api';
     } else if (Platform.isAndroid) {
-      // Real Phone testing ke liye:
       return 'http://$myLaptopIp:5000/api';
-
-      // Emulator testing ke liye:
-      // return 'http://10.0.2.2:5000/api';
     } else {
       return 'http://localhost:5000/api';
+    }
+  }
+
+  // Emulator specific fallback URL
+  static String get emulatorUrl => 'http://10.0.2.2:5000/api';
+
+  // Helper method: Real phone IP pehle try karega, agar fail hua toh Emulator IP pe try karega
+  static Future<http.Response> _postWithFallback(String endpoint, Map<String, dynamic> body) async {
+    final headers = {'Content-Type': 'application/json'};
+    final encodedBody = jsonEncode(body);
+
+    try {
+      // 1. Laptop IP try karo (Real Phone & Wi-Fi)
+      final primaryUrl = Uri.parse('$baseUrl$endpoint');
+      return await http
+          .post(primaryUrl, headers: headers, body: encodedBody)
+          .timeout(const Duration(seconds: 4));
+    } catch (_) {
+      if (Platform.isAndroid) {
+        // 2. Agar fail ho jaye toh Emulator 10.0.2.2 try karo
+        final fallbackUrl = Uri.parse('$emulatorUrl$endpoint');
+        return await http
+            .post(fallbackUrl, headers: headers, body: encodedBody)
+            .timeout(const Duration(seconds: 5));
+      }
+      rethrow;
     }
   }
 
@@ -38,27 +61,21 @@ class ApiService {
     int? experienceYears,
     String? licenseNumber,
   }) async {
-    final url = Uri.parse('$baseUrl/signup');
-
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone_number': phoneNumber,
-          'email': email,
-          'password': password,
-          'role': role,
-          'full_name': fullName,
-          'age': age,
-          'gender': gender,
-          'blood_group': bloodGroup,
-          'emergency_contact': emergencyContact,
-          'specialization': specialization,
-          'experience_years': experienceYears,
-          'license_number': licenseNumber,
-        }),
-      );
+      final response = await _postWithFallback('/signup', {
+        'phone_number': phoneNumber,
+        'email': email,
+        'password': password,
+        'role': role,
+        'full_name': fullName,
+        'age': age,
+        'gender': gender,
+        'blood_group': bloodGroup,
+        'emergency_contact': emergencyContact,
+        'specialization': specialization,
+        'experience_years': experienceYears,
+        'license_number': licenseNumber,
+      });
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Server se connect nahi ho paya: $e'};
@@ -66,23 +83,17 @@ class ApiService {
   }
 
   // ----------------------------------------------------
-  // 2. LOGIN API CALL (Mobile number ya Email dono chalega)
+  // 2. LOGIN API CALL
   // ----------------------------------------------------
   static Future<Map<String, dynamic>> login({
     required String identifier,
     required String password,
   }) async {
-    final url = Uri.parse('$baseUrl/login');
-
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'identifier': identifier,
-          'password': password,
-        }),
-      );
+      final response = await _postWithFallback('/login', {
+        'identifier': identifier,
+        'password': password,
+      });
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Server se connect nahi ho paya: $e'};
@@ -125,7 +136,7 @@ class ApiService {
   }
 
   // ----------------------------------------------------
-  // 4. GET USER PROFILE (Database se complete profile lene ke liye)
+  // 4. GET USER PROFILE
   // ----------------------------------------------------
   static Future<Map<String, dynamic>> getUserProfile(int userId, {String? token}) async {
     final url = Uri.parse('$baseUrl/user/$userId');
