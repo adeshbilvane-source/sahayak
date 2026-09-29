@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service.dart';
 
 class PatientRegisterScreen extends StatefulWidget {
@@ -56,13 +55,12 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     String ageText = _ageController.text.trim();
     String emergency = _emergencyContactController.text.trim();
 
-    // 1. Mandatory Validations
+    // Validations
     if (username.isEmpty || phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showError('Username, Mobile Number aur Password zaroori hain!');
       return;
     }
 
-    // Emergency Contact compulsory validation
     if (emergency.isEmpty) {
       _showError('Family Emergency Contact Number daalna zaroori hai!');
       return;
@@ -93,26 +91,17 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
+      // Agar account successfully ban gaya
       if (res['user_id'] != null || res['message'] != null || res['token'] != null) {
-        // Register hote hi number ko local memory mein save kar lo
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('savedEmergencyContact', emergency);
-        await prefs.setString('emergency_contact', emergency);
-        await prefs.setString('savedUsername', username);
-        await prefs.setString('full_name', username);
-        if (res['user_id'] != null) {
-          await prefs.setInt('userId', int.tryParse(res['user_id'].toString()) ?? 0);
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account successfully create ho gaya! Ab login karein.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
-        }
+        // YAHAN KOI BHI SESSION YA USER DATA SAVE NAHI HOGA
+        // User ko manual login karna hoga
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account successfully ban gaya! Kripya apna mobile number aur password dalkar login karein.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
       } else {
         _showError(res['error'] ?? 'Registration fail ho gaya.');
       }
@@ -280,7 +269,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Emergency Contact (Now Compulsory with *)
+                    // Emergency Contact
                     Text('Emergency Contact Number (Family Member) *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _ink)),
                     const SizedBox(height: 6),
                     TextField(

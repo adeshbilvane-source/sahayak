@@ -7,6 +7,9 @@ import 'screens/auth/patient_login_screen.dart';
 import 'screens/auth/patient_register_screen.dart';
 import 'screens/auth/doctor_login_screen.dart';
 
+// Doctor Screen (Apne doctor home screen ka import add karein)
+// import 'screens/doctor/doctor_home_screen.dart';
+
 // Patient Screens
 import 'screens/patient/patient_home_screen.dart';
 import 'screens/patient/emergency_screen.dart';
@@ -22,24 +25,31 @@ import 'screens/patient/games/identify_picture.dart';
 import 'screens/patient/games/memory_match.dart';
 import 'screens/patient/games/jigsaw_puzzle.dart';
 
-
-
-
 void main() async {
-  // App start hone se pehle bindings initialize karna zaroori hai
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Local storage se check kar rahe hain ki user logged in hai ya nahi
   final prefs = await SharedPreferences.getInstance();
   final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+  final String userRole = prefs.getString('userRole') ?? ''; // 'patient' ya 'doctor'
 
-  runApp(NeuroNestApp(isLoggedIn: isLoggedIn));
+  // Initial Route decide karna
+  String initialRoute = '/login';
+
+  if (isLoggedIn) {
+    if (userRole == 'doctor') {
+      initialRoute = '/doctor_home';
+    } else {
+      initialRoute = '/patient_home';
+    }
+  }
+
+  runApp(NeuroNestApp(initialRoute: initialRoute));
 }
 
 class NeuroNestApp extends StatelessWidget {
-  final bool isLoggedIn; // Login status yahan receive kiya
+  final String initialRoute;
 
-  const NeuroNestApp({super.key, required this.isLoggedIn});
+  const NeuroNestApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +61,12 @@ class NeuroNestApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF3F6F0),
         fontFamily: 'Nunito',
       ),
-      // Agar login hai toh direct Home, warna Login screen
-      initialRoute: isLoggedIn ? '/patient_home' : '/login',
+      initialRoute: initialRoute,
       routes: {
         '/login': (context) => const LoginScreen(),
         '/patient_home': (context) => const PatientHomeScreen(),
+        // Doctor Home Screen route add karein:
+        // '/doctor_home': (context) => const DoctorHomeScreen(),
         '/emergency': (context) => const EmergencyScreen(),
         '/patient_login': (context) => const PatientLoginScreen(),
         '/register': (context) => const PatientRegisterScreen(),

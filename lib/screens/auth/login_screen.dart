@@ -68,22 +68,22 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 children: [
                   Container(
-                    width: 74,
-                    height: 74,
+                    width: 100,
+                    height: 100,
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       color: _green,
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(100),
                     ),
                     child: Center(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(
-                          10,
+                          100,
                         ), // Agar logo square hai to thoda gol karne ke liye
                         child: Image.asset(
-                          'assets/sahayak_logo.jpg.jpeg',
-                          width: 48,
-                          height: 48,
+                          'assets/sahayak_logo.png',
+                          width: 100,
+                          height: 100,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -92,7 +92,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'Sahayak',
                     style: TextStyle(
-                      fontStyle: FontStyle.italic,
                       fontWeight: FontWeight.w600,
                       fontSize: 30,
                       color: _ink,

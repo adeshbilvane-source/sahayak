@@ -45,7 +45,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
       if (_isLogin) {
         // DOCTOR LOGIN API
         final res = await ApiService.login(
-          identifier: identifier, // Jo user ne textfield mein dala (email ya phone)
+          identifier: identifier,
           password: password,
         );
 
@@ -60,9 +60,11 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
           }
 
           final prefs = await SharedPreferences.getInstance();
+          await prefs.clear();
           await prefs.setBool('isLoggedIn', true);
           await prefs.setString('token', res['token']);
-          await prefs.setString('userRole', 'caretaker');
+          // main.dart ke check ke sath match karne ke liye 'doctor' set kiya gaya hai
+          await prefs.setString('userRole', 'doctor');
 
           if (mounted) {
             Navigator.pushAndRemoveUntil(

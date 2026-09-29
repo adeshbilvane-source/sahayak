@@ -58,7 +58,13 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
         }
 
         final prefs = await SharedPreferences.getInstance();
+
+        // 1. Purana session clear karein
+        await prefs.clear();
+
+        // 2. Fresh session keys aur userRole set karein
         await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('userRole', 'patient');
         await prefs.setString('token', res['token']);
 
         final dynamic rawUserId = userData['id'] ?? userData['user_id'];
@@ -68,7 +74,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
         await prefs.setString('savedPhone', userData['phone_number']?.toString() ?? '');
 
-        // Backend response me se dynamically Name nikalna
+        // 3. User Name dynamically save karein
         final dynamic rawName = userData['profile']?['full_name'] ??
             userData['full_name'] ??
             'User';
@@ -76,13 +82,12 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
         await prefs.setString('savedUsername', loggedInName);
         await prefs.setString('full_name', loggedInName);
 
-        // Backend response me se dynamically Emergency Number nikalna
+        // 4. Emergency Number dynamically save karein
         final dynamic rawEmergency = userData['profile']?['emergency_contact'] ??
             userData['emergency_contact'];
 
         if (rawEmergency != null && rawEmergency.toString().trim().isNotEmpty) {
           String contactStr = rawEmergency.toString().trim();
-          // Har possible key me save kar diya taaki emergency screen ko turant mil jaye
           await prefs.setString('savedEmergencyContact', contactStr);
           await prefs.setString('emergency_contact', contactStr);
           await prefs.setString('savedEmergency', contactStr);
@@ -126,19 +131,28 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                 Column(
                   children: [
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 72,
+                      height: 72,
                       decoration: BoxDecoration(
                         color: _green.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.hub, size: 36, color: _green),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/sahayak_logo.png',
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.hub, size: 36, color: _green),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'SAHAYAK',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 25,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
                         color: _accentOrange,
@@ -220,7 +234,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          hintText: '••••••••••••••••',
+                          hintText: '••••••••••',
                           prefixIcon: Icon(Icons.lock_outline, color: _ink),
                           suffixIcon: IconButton(
                             icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
