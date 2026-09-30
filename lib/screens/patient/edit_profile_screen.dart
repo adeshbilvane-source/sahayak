@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service.dart';
 
@@ -22,21 +25,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   int? _userId;
   bool _isLoading = false;
 
+  File? _pickedImageFile;
+  String? _existingProfileImage; // Existing image from database/prefs
+
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
     _loadInitialUserData();
   }
 
-  // Database / SharedPreferences se saved data fetch karke text fields me set karein
   Future<void> _loadInitialUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userId = prefs.getInt('userId');
       _nameController.text = prefs.getString('savedUsername') ?? '';
       _phoneController.text = prefs.getString('savedPhone') ?? '';
-      _emergencyController.text = prefs.getString('savedEmergency') ?? '';
+      _emergencyController.text = prefs.getString('savedEmergency') ?? prefs.getString('emergency_contact') ?? '';
       _bloodGroupController.text = prefs.getString('savedBloodGroup') ?? '';
+      _existingProfileImage = prefs.getString('profile_image');
     });
   }
 
@@ -49,6 +57,63 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // Camera ya Gallery se photo pick karne ka bottom sheet
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library, color: _green),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: _green),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (picked != null) {
+        setState(() {
+          _pickedImageFile = File(picked.path);
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image selection failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   Future<void> _saveChanges() async {
     String name = _nameController.text.trim();
     String phone = _phoneController.text.trim();
@@ -57,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     if (name.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name aur Phone Number khali nahi ho sakte'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Name aur Phone Number required hain!'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -65,30 +130,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Backend API Call to update database
+      String? base64Image;
+      if (_pickedImageFile != null) {
+        final bytes = await _pickedImageFile!.readAsBytes();
+        base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      }
+
       final res = await ApiService.updateProfile(
         userId: _userId ?? 1,
         fullName: name,
         phoneNumber: phone,
         emergencyContact: emergency,
         bloodGroup: blood,
+        profileImage: base64Image ?? _existingProfileImage,
       );
 
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (res['message'] != null) {
-        // SharedPreferences update karein taaki Home Screen aur Settings Screen par turant naya data dikhe
+      if (res['message'] != null || res['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('savedUsername', name);
         await prefs.setString('savedPhone', phone);
         await prefs.setString('savedEmergency', emergency);
+        await prefs.setString('emergency_contact', emergency);
         await prefs.setString('savedBloodGroup', blood);
 
+        if (_pickedImageFile != null) {
+          await prefs.setString('profile_image', _pickedImageFile!.path);
+        }
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile Updated Successfully!'), backgroundColor: Colors.green),
         );
-        Navigator.pop(context, name); // Go back with updated name
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['error'] ?? 'Profile update fail ho gaya'), backgroundColor: Colors.red),
@@ -101,6 +177,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Widget _buildAvatarPreview() {
+    if (_pickedImageFile != null) {
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: FileImage(_pickedImageFile!),
+      );
+    }
+
+    if (_existingProfileImage != null && _existingProfileImage!.isNotEmpty) {
+      if (_existingProfileImage!.startsWith('http')) {
+        return CircleAvatar(
+          radius: 60,
+          backgroundImage: NetworkImage(_existingProfileImage!),
+        );
+      } else if (_existingProfileImage!.startsWith('/') || _existingProfileImage!.contains('\\')) {
+        return CircleAvatar(
+          radius: 60,
+          backgroundImage: FileImage(File(_existingProfileImage!)),
+        );
+      } else {
+        return CircleAvatar(
+          radius: 60,
+          backgroundImage: AssetImage(_existingProfileImage!),
+        );
+      }
+    }
+
+    return CircleAvatar(
+      radius: 60,
+      backgroundColor: _green.withValues(alpha: 0.15),
+      child: Icon(Icons.person, size: 60, color: _green),
+    );
   }
 
   @override
@@ -118,29 +228,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Profile Photo with Edit Badge
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(radius: 60, backgroundColor: _green.withValues(alpha: 0.2), child: Icon(Icons.person, size: 60, color: _green)),
+                  _buildAvatarPreview(),
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: GestureDetector(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gallery Opening...'))),
+                      onTap: _showImagePickerOptions,
                       child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: _green, shape: BoxShape.circle, border: Border.all(color: _canvas, width: 3)),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _canvas, width: 3),
+                        ),
                         child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
 
-            // Input Fields
             _buildTextField('Full Name', Icons.person, _nameController),
             const SizedBox(height: 16),
             _buildTextField('Phone Number', Icons.phone, _phoneController),
@@ -150,7 +262,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _buildTextField('Blood Group', Icons.bloodtype, _bloodGroupController),
             const SizedBox(height: 40),
 
-            // Save Button
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -162,7 +273,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Save Changes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                    : const Text(
+                  'Save Changes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
             ),
           ],

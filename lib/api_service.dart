@@ -27,14 +27,12 @@ class ApiService {
     final encodedBody = jsonEncode(body);
 
     try {
-      // 1. Laptop IP try karo (Real Phone & Wi-Fi)
       final primaryUrl = Uri.parse('$baseUrl$endpoint');
       return await http
           .post(primaryUrl, headers: headers, body: encodedBody)
           .timeout(const Duration(seconds: 4));
     } catch (_) {
       if (Platform.isAndroid) {
-        // 2. Agar fail ho jaye toh Emulator 10.0.2.2 try karo
         final fallbackUrl = Uri.parse('$emulatorUrl$endpoint');
         return await http
             .post(fallbackUrl, headers: headers, body: encodedBody)
@@ -101,7 +99,7 @@ class ApiService {
   }
 
   // ----------------------------------------------------
-  // 3. UPDATE PROFILE API CALL
+  // 3. UPDATE PROFILE API CALL (With Profile Image Support)
   // ----------------------------------------------------
   static Future<Map<String, dynamic>> updateProfile({
     required int userId,
@@ -109,6 +107,7 @@ class ApiService {
     required String phoneNumber,
     String? emergencyContact,
     String? bloodGroup,
+    String? profileImage,
   }) async {
     final url = Uri.parse('$baseUrl/update-profile');
 
@@ -122,6 +121,7 @@ class ApiService {
           'phone_number': phoneNumber,
           'emergency_contact': emergencyContact,
           'blood_group': bloodGroup,
+          if (profileImage != null) 'profile_image': profileImage,
         }),
       );
 

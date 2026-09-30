@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../api_service.dart';
 import 'videos_library_screen.dart';
-import 'reminders_screen.dart'; // Reminders Screen Import
+import 'reminders_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -22,6 +22,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   final Color _red = const Color(0xFF8B2F27);
 
   String _userName = 'User';
+  String? _profileImage;
   String _currentTime = '';
   String _currentDate = '';
   String _greeting = 'Good Morning';
@@ -43,18 +44,23 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     });
   }
 
-  // Database / SharedPreferences se logged-in user details load karein
   Future<void> _loadSavedUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedName = prefs.getString('savedUsername') ?? prefs.getString('full_name');
-    if (savedName != null && savedName.isNotEmpty && mounted) {
+    final savedPic = prefs.getString('profile_image') ?? prefs.getString('savedProfileImage');
+
+    if (mounted) {
       setState(() {
-        _userName = savedName;
+        if (savedName != null && savedName.isNotEmpty) {
+          _userName = savedName;
+        }
+        if (savedPic != null && savedPic.trim().isNotEmpty) {
+          _profileImage = savedPic.trim();
+        }
       });
     }
   }
 
-  // Backend se user profile aur emergency_contact local SharedPreferences mein sync karein
   Future<void> _syncEmergencyContactToLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -74,6 +80,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
+
         final dynamic fetchedContact = data['emergency_contact'] ??
             data['user']?['emergency_contact'] ??
             data['profile']?['emergency_contact'];
@@ -85,9 +92,26 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             await prefs.setString('emergency_contact', contactStr);
           }
         }
+
+        final dynamic fetchedImage = data['profile_image'] ??
+            data['user']?['profile_image'] ??
+            data['profile']?['profile_image'] ??
+            data['avatar'];
+
+        if (fetchedImage != null) {
+          final String imgStr = fetchedImage.toString().trim();
+          if (imgStr.isNotEmpty) {
+            await prefs.setString('profile_image', imgStr);
+            if (mounted) {
+              setState(() {
+                _profileImage = imgStr;
+              });
+            }
+          }
+        }
       }
     } catch (e) {
-      debugPrint("Emergency contact sync error: $e");
+      debugPrint("Emergency contact & profile sync error: $e");
     }
   }
 
@@ -135,6 +159,61 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     });
   }
 
+  Widget _buildProfileAvatar() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(context, '/edit_profile');
+        _loadSavedUserData();
+      },
+      child: Container(
+        width: 82,
+        height: 82,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          border: Border.all(color: Colors.white, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: _profileImage != null && _profileImage!.isNotEmpty
+              ? (_profileImage!.startsWith('http')
+              ? Image.network(
+            _profileImage!,
+            width: 82,
+            height: 82,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _fallbackAvatar(),
+          )
+              : Image.asset(
+            _profileImage!,
+            width: 82,
+            height: 82,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _fallbackAvatar(),
+          ))
+              : _fallbackAvatar(),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallbackAvatar() {
+    return Container(
+      color: const Color(0xFFE5EDE7),
+      child: Icon(
+        Icons.person,
+        size: 42,
+        color: _green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,7 +229,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Scrollable Content
               SingleChildScrollView(
                 controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 260),
@@ -165,8 +243,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10)),
-                            child: Text('$_currentDate - $_currentTime', style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14)),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$_currentDate - $_currentTime',
+                              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14),
+                            ),
                           ),
                           Row(
                             children: [
@@ -179,32 +263,43 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       ),
                     ),
 
-                    // Greeting
+                    // Greeting Section with Profile Photo on the LEFT
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            fontFamily: 'Fraunces',
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 32,
-                            height: 1.15,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: '$_greeting,\n',
-                              style: TextStyle(color: _ink),
-                            ),
-                            TextSpan(
-                              text: '$_userName 🌻',
-                              style: TextStyle(
-                                color: _inkSoft,
-                                fontStyle: FontStyle.normal,
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 18),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // 1. Profile Avatar (LEFT)
+                          _buildProfileAvatar(),
+                          const SizedBox(width: 18),
+
+                          // 2. Greeting & Name (RIGHT)
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontFamily: 'Fraunces',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 34,
+                                  height: 1.25,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: '$_greeting,\n',
+                                    style: TextStyle(color: _ink),
+                                  ),
+                                  TextSpan(
+                                    text: '$_userName 🌻',
+                                    style: TextStyle(
+                                      color: _inkSoft,
+                                      fontStyle: FontStyle.normal,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -257,7 +352,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         ),
                         child: Text(
                           _showAllFeatures ? 'Hide features' : 'Show all features',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, decoration: TextDecoration.underline),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ),
@@ -271,7 +371,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
                         child: Row(
                           children: [
-                            // 1. Reminders Button (One-Press to Open RemindersScreen)
                             Expanded(
                               child: _buildGridCard('Reminders', 'assets/reminder.png', () {
                                 Navigator.push(
@@ -281,7 +380,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               }),
                             ),
                             const SizedBox(width: 12),
-                            // 2. Appointments Button
                             Expanded(
                               child: _buildGridCard('Appointments', 'assets/appointment.png', () {
                                 Navigator.pushNamed(context, '/caregivers_schedule');
@@ -296,9 +394,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 ),
               ),
 
-              // Fixed Emergency SOS Button at the Bottom
+              // Fixed Emergency SOS Button at Bottom
               Positioned(
-                bottom: 24, left: 24, right: 24,
+                bottom: 24,
+                left: 24,
+                right: 24,
                 child: GestureDetector(
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
@@ -314,13 +414,23 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       color: _red,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [BoxShadow(color: _red.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 12))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: _red.withValues(alpha: 0.35),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 46, height: 46,
-                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
                           child: const Icon(Icons.phone_in_talk, color: Colors.white),
                         ),
                         const SizedBox(width: 16),
@@ -328,9 +438,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Emergency — Call Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                              Text(
+                                'Emergency — Call Now',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                              ),
                               SizedBox(height: 2),
-                              Text('Alerts family instantly with your location', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white70)),
+                              Text(
+                                'Alerts family instantly with your location',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white70),
+                              ),
                             ],
                           ),
                         ),
@@ -348,11 +464,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
   Widget _buildSettingsButton() {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/patient_settings', arguments: _userName),
+      onTap: () async {
+        await Navigator.pushNamed(context, '/patient_settings', arguments: _userName);
+        _loadSavedUserData();
+      },
       child: Container(
-        width: 34, height: 34,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
           boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
         ),
         child: Icon(Icons.settings_outlined, size: 18, color: _green),

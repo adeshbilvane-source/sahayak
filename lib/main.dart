@@ -7,8 +7,8 @@ import 'screens/auth/patient_login_screen.dart';
 import 'screens/auth/patient_register_screen.dart';
 import 'screens/auth/doctor_login_screen.dart';
 
-// Doctor Screen (Apne doctor home screen ka import add karein)
-// import 'screens/doctor/doctor_home_screen.dart';
+// Doctor Screen (Uncommented & Active)
+import 'screens/doctor/doctor_home_screen.dart';
 
 // Patient Screens
 import 'screens/patient/patient_home_screen.dart';
@@ -31,13 +31,14 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-  final String userRole = prefs.getString('userRole') ?? ''; // 'patient' ya 'doctor'
+  final String userRole = (prefs.getString('userRole') ?? '').toLowerCase();
 
   // Initial Route decide karna
   String initialRoute = '/login';
 
   if (isLoggedIn) {
-    if (userRole == 'doctor') {
+    // Doctor ya Caretaker dono ko doctor_home par bhejega
+    if (userRole == 'doctor' || userRole == 'caretaker') {
       initialRoute = '/doctor_home';
     } else {
       initialRoute = '/patient_home';
@@ -66,13 +67,13 @@ class NeuroNestApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/patient_home': (context) => const PatientHomeScreen(),
-        // Doctor Home Screen route add karein:
-        // '/doctor_home': (context) => const DoctorHomeScreen(),
+        // Doctor Home Screen route active kar diya
+        '/doctor_home': (context) => const DoctorHomeScreen(),
         '/emergency': (context) => const EmergencyScreen(),
         '/patient_login': (context) => const PatientLoginScreen(),
         '/register': (context) => const PatientRegisterScreen(),
-        '/doctor_login': (context) => const DoctorLoginScreen(),
         '/patient_settings': (context) => const PatientSettingsScreen(),
+        '/doctor_login': (context) => const DoctorAuthScreen(),
         '/edit_profile': (context) => const EditProfileScreen(),
         '/activity': (context) => const ActivityScreen(),
         '/game_button_sort': (context) => const ButtonSortingScreen(),
