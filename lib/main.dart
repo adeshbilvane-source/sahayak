@@ -13,7 +13,6 @@ import 'screens/patient/emergency_screen.dart';
 import 'screens/patient/patient_settings_screen.dart';
 import 'screens/patient/edit_profile_screen.dart';
 import 'screens/patient/activity_screen.dart';
-import 'screens/patient/videos_library_screen.dart';
 import 'screens/patient/family_emergency_screen.dart';
 
 // Games Screens
