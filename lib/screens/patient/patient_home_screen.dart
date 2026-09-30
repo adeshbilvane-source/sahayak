@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,8 @@ import 'package:http/http.dart' as http;
 import '../../api_service.dart';
 import 'videos_library_screen.dart';
 import 'reminders_screen.dart';
+// Nayi add_caretaker_screen ko import karna mat bhoolna
+import 'add_caretaker_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -159,6 +162,57 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     });
   }
 
+  Widget _displayImageWidget(String? img) {
+    if (img == null || img.trim().isEmpty) {
+      return _fallbackAvatar();
+    }
+
+    try {
+      if (img.contains('base64,')) {
+        String cleanBase64 = img.split('base64,').last;
+        cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
+
+        while (cleanBase64.length % 4 != 0) {
+          cleanBase64 += '=';
+        }
+
+        return Image.memory(
+          base64Decode(cleanBase64),
+          fit: BoxFit.cover,
+          width: 82,
+          height: 82,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint("Home Image Load Error: $error");
+            return _fallbackAvatar();
+          },
+        );
+      } else if (img.startsWith('http://') || img.startsWith('https://')) {
+        return Image.network(
+          img,
+          fit: BoxFit.cover,
+          width: 82,
+          height: 82,
+          errorBuilder: (_, __, ___) => _fallbackAvatar(),
+        );
+      } else {
+        final file = File(img);
+        if (file.existsSync()) {
+          return Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: 82,
+            height: 82,
+            errorBuilder: (_, __, ___) => _fallbackAvatar(),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Home image render error: $e");
+    }
+
+    return _fallbackAvatar();
+  }
+
   Widget _buildProfileAvatar() {
     return GestureDetector(
       onTap: () async {
@@ -181,23 +235,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ],
         ),
         child: ClipOval(
-          child: _profileImage != null && _profileImage!.isNotEmpty
-              ? (_profileImage!.startsWith('http')
-              ? Image.network(
-            _profileImage!,
-            width: 82,
-            height: 82,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _fallbackAvatar(),
-          )
-              : Image.asset(
-            _profileImage!,
-            width: 82,
-            height: 82,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _fallbackAvatar(),
-          ))
-              : _fallbackAvatar(),
+          child: _displayImageWidget(_profileImage),
         ),
       ),
     );
@@ -248,12 +286,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '$_currentDate - $_currentTime',
+                              '$_currentDate\n$_currentTime',
                               style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14),
                             ),
                           ),
                           Row(
                             children: [
+                              _buildAddCaretakerButton(), // <-- Naya Button
+                              const SizedBox(width: 8),
                               _buildSettingsButton(),
                               const SizedBox(width: 8),
                               _buildLangButton(),
@@ -263,17 +303,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       ),
                     ),
 
-                    // Greeting Section with Profile Photo on the LEFT
+                    // Greeting Section with Profile Photo
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 28, 24, 18),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // 1. Profile Avatar (LEFT)
                           _buildProfileAvatar(),
                           const SizedBox(width: 18),
-
-                          // 2. Greeting & Name (RIGHT)
                           Expanded(
                             child: RichText(
                               text: TextSpan(
@@ -458,6 +495,28 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // --- NEW ADD CARETAKER BUTTON ---
+  Widget _buildAddCaretakerButton() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AddCaretakerScreen()),
+        );
+      },
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+        ),
+        child: Icon(Icons.person_add, size: 18, color: _green),
       ),
     );
   }

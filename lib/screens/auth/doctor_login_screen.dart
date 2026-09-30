@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service.dart';
 import 'login_screen.dart';
-import '../doctor/doctor_home_screen.dart';
+import '../doctor/doctor_main_screen.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
   const DoctorAuthScreen({super.key});
@@ -117,7 +117,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => const DoctorHomeScreen(),
+              builder: (context) => const DoctorMainScreen(),
               settings: RouteSettings(arguments: docName),
             ),
                 (route) => false,

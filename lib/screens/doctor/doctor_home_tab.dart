@@ -34,29 +34,20 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
 
   Future<void> _loadDoctorData() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedName = prefs.getString('savedUsername') ?? prefs.getString('full_name');
+    final savedPic = prefs.getString('profile_image');
     final uId = prefs.getInt('userId') ?? 0;
 
-    setState(() {
-      _caretakerId = uId;
-      _doctorName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Doctor';
-      _profileImage = prefs.getString('profile_image');
-    });
-
-    if (_caretakerId > 0) {
-      final data = await ApiService.getUserProfile(_caretakerId);
-      if (!data.containsKey('error') && mounted) {
-        var profile = data['profile'] ?? data;
-        setState(() {
-          if (profile['full_name'] != null) {
-            _doctorName = profile['full_name'];
-            prefs.setString('savedUsername', _doctorName);
-          }
-          if (profile['profile_image'] != null && profile['profile_image'].toString().trim().isNotEmpty) {
-            _profileImage = profile['profile_image'];
-            prefs.setString('profile_image', _profileImage!);
-          }
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _caretakerId = uId;
+        if (savedName != null && savedName.trim().isNotEmpty) {
+          _doctorName = savedName.trim();
+        }
+        if (savedPic != null && savedPic.trim().isNotEmpty) {
+          _profileImage = savedPic.trim();
+        }
+      });
     }
   }
 

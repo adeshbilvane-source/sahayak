@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../api_service.dart';
 
 class CaregiversScheduleScreen extends StatefulWidget {
   const CaregiversScheduleScreen({super.key});
@@ -10,57 +15,196 @@ class CaregiversScheduleScreen extends StatefulWidget {
 class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
   final Color _bgCanvas = const Color(0xFFF7F8F5);
   final Color _primaryGreen = const Color(0xFF2E5140);
-  final Color _subHeadingAmber = const Color(0xFFC78436);
-  final Color _cardTimeBg = const Color(0xFFE8F2DC);
   final Color _textDark = const Color(0xFF1E2822);
   final Color _orangeBtn = const Color(0xFFD98A2B);
 
-  int _selectedBottomIndex = 0; // Default Appointments
+  int _selectedBottomIndex = 0;
+
+  // Real Patient Data
+  String _patientName = 'Loading...';
+  int _patientUserId = 0;
+  String _patientIdStr = '#SAH-2026';
+  String? _patientProfileImage;
+
+  // Real Data
+  List<dynamic> _realCaregivers = [];
+  List<dynamic> _myAppointments = [];
+  bool _isLoading = true;
+
+  // Booking Form Controllers
+  final TextEditingController _dateController = TextEditingController(text: 'Fri, 28 Aug');
+  final TextEditingController _timeController = TextEditingController(text: '10:30 AM');
+  final TextEditingController _reasonController = TextEditingController(text: 'Routine Checkup');
+  int? _selectedCaregiverId;
 
   // Chat state
-  String? _activeChatDoctor;
+  String? _activeChatDoctorName;
+  String? _activeChatDoctorImage;
   final TextEditingController _msgInputController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [
-    {'sender': 'doctor', 'text': 'Hello! How are you feeling today?'},
-    {'sender': 'patient', 'text': 'I have a slight headache since morning.'},
-    {'sender': 'doctor', 'text': 'Please make sure to take your vitals and rest.'},
-  ];
-
-  // Dummy Data for Caregivers & Profile Visits
-  final List<Map<String, dynamic>> _todayVisits = [
-    {
-      'time': '9:00',
-      'period': 'AM',
-      'name': 'Schumacher, Elias',
-      'role': 'Routine Checkup - Check Vitals',
-      'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      'isActive': true,
-      'status': 'Confirmed',
-    },
-    {
-      'time': '08:21',
-      'period': 'AM',
-      'name': 'Fischer, Lea',
-      'role': 'Routine Checkup - Check Vitals',
-      'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      'isActive': false,
-      'status': 'Confirmed',
-    },
-    {
-      'time': '08:37',
-      'period': 'AM',
-      'name': 'Angelika, Lorenz',
-      'role': 'Routine Checkup - Check Vitals',
-      'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      'isActive': false,
-      'status': 'Pending Approval',
-    },
+    {'sender': 'doctor', 'text': 'Hello! How can I help you today?'},
   ];
 
   @override
-  void dispose() {
-    _msgInputController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadPatientDataAndAppointments();
+  }
+
+  Future<void> _loadPatientDataAndAppointments() async {
+    final prefs = await SharedPreferences.getInstance();
+    int uId = prefs.getInt('userId') ?? 0;
+
+    setState(() {
+      _patientName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Patient';
+      _patientUserId = uId;
+      _patientIdStr = '#SAH-2026-0$uId';
+      _patientProfileImage = prefs.getString('profile_image');
+    });
+
+    _fetchCaregiversAndAppointments();
+  }
+
+  Future<void> _fetchCaregiversAndAppointments() async {
+    if (_patientUserId == 0) return;
+
+    setState(() => _isLoading = true);
+    final caretakers = await ApiService.getAllCaretakers();
+    final appointments = await ApiService.getPatientAppointments(_patientUserId);
+
+    setState(() {
+      _realCaregivers = caretakers;
+      _myAppointments = appointments;
+      _isLoading = false;
+
+      if (caretakers.isNotEmpty) {
+        _selectedCaregiverId = caretakers[0]['user_id'];
+        _activeChatDoctorName = caretakers[0]['full_name'];
+        _activeChatDoctorImage = caretakers[0]['profile_image'];
+      }
+    });
+  }
+
+  // --- BOOK SLOT DIALOG ---
+  void _showBookSlotDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Book Appointment Slot', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select Caretaker', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<int>(
+                  value: _selectedCaregiverId,
+                  items: _realCaregivers.map<DropdownMenuItem<int>>((doc) {
+                    return DropdownMenuItem<int>(
+                      value: doc['user_id'],
+                      child: Text(doc['full_name'] ?? 'Doctor'),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => _selectedCaregiverId = val);
+                  },
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _dateController,
+                  decoration: InputDecoration(filled: true, fillColor: Colors.grey.shade100, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 12),
+                const Text('Time', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _timeController,
+                  decoration: InputDecoration(filled: true, fillColor: Colors.grey.shade100, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 12),
+                const Text('Reason / Symptoms', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _reasonController,
+                  decoration: InputDecoration(filled: true, fillColor: Colors.grey.shade100, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _primaryGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              onPressed: () async {
+                if (_selectedCaregiverId == null) return;
+                Navigator.pop(context);
+
+                bool success = await ApiService.bookAppointment(
+                  _patientUserId,
+                  _selectedCaregiverId!,
+                  _dateController.text.trim(),
+                  _timeController.text.trim(),
+                  _reasonController.text.trim(),
+                );
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appointment requested successfully!'), backgroundColor: Colors.green));
+                  _loadPatientDataAndAppointments();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to book appointment.'), backgroundColor: Colors.red));
+                }
+              },
+              child: const Text('Send Request', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _launchVideoCall() async {
+    final Uri url = Uri.parse('https://meet.jit.si/SahayakTeleconsultation');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open video call link')));
+      }
+    } catch (e) {
+      debugPrint('Video call error: $e');
+    }
+  }
+
+  Widget _buildSafeAvatar(String? img, {double radius = 24}) {
+    if (img == null || img.trim().isEmpty) {
+      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withOpacity(0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
+    }
+    try {
+      if (img.contains('base64,')) {
+        String cleanBase64 = img.split('base64,').last.replaceAll(RegExp(r'\s+'), '');
+        while (cleanBase64.length % 4 != 0) cleanBase64 += '=';
+        return CircleAvatar(radius: radius, backgroundImage: MemoryImage(base64Decode(cleanBase64)));
+      } else if (img.startsWith('http')) {
+        return CircleAvatar(radius: radius, backgroundImage: NetworkImage(img));
+      } else {
+        return CircleAvatar(radius: radius, backgroundImage: FileImage(File(img)));
+      }
+    } catch (e) {
+      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withOpacity(0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
+    }
   }
 
   @override
@@ -68,413 +212,232 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     return Scaffold(
       backgroundColor: _bgCanvas,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildHeader(),
-            Expanded(
-              child: IndexedStack(
-                index: _selectedBottomIndex,
-                children: [
-                  _buildAppointmentsTab(),
-                  _buildCaregiversTab(),
-                  _buildMessagesTab(),
-                  _buildProfileTab(),
-                ],
-              ),
+            Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: IndexedStack(
+                    index: _selectedBottomIndex,
+                    children: [
+                      _buildAppointmentsTab(),
+                      _buildCaregiversTab(),
+                      _buildMessagesTab(),
+                      _buildProfileTab(),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Voice Assistant Listening...')),
-          );
-        },
-        backgroundColor: _primaryGreen,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.mic, color: Colors.white, size: 28),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // ----------------------------------------------------
-  // TOP BAR HEADER
-  // ----------------------------------------------------
   Widget _buildHeader() {
-    String title = 'Appointments';
-    if (_selectedBottomIndex == 1) title = 'Find Caregivers';
-    if (_selectedBottomIndex == 2) title = 'Live Messages';
-    if (_selectedBottomIndex == 3) title = 'Patient Profile';
-
+    String title = ['Appointments', 'Find Caregivers', 'Live Messages', 'Patient Profile'][_selectedBottomIndex];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECEFE8),
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFECEFE8), borderRadius: BorderRadius.circular(30)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            onTap: () {
-              if (_selectedBottomIndex != 0) {
-                setState(() => _selectedBottomIndex = 0);
-              } else {
-                Navigator.pop(context);
-              }
-            },
-            child: const Row(
-              children: [
-                Icon(Icons.arrow_back, color: Colors.black, size: 22),
-                SizedBox(width: 4),
-                Text(
-                  'BACK',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ],
-            ),
+            onTap: () => _selectedBottomIndex != 0 ? setState(() => _selectedBottomIndex = 0) : Navigator.pop(context),
+            child: const Row(children: [Icon(Icons.arrow_back, color: Colors.black, size: 22), SizedBox(width: 4), Text('BACK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))]),
           ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: _textDark,
-              fontFamily: 'serif',
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.translate, color: Colors.black),
-            onPressed: () {},
-          ),
+          Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _textDark, fontFamily: 'serif')),
+          IconButton(icon: const Icon(Icons.translate, color: Colors.black), onPressed: () {}),
         ],
       ),
     );
   }
 
   // ----------------------------------------------------
-  // TAB 0: APPOINTMENTS (1st Photo Exact Design)
+  // TAB 0: APPOINTMENTS WITH SCHEDULE & VIDEO CALL
   // ----------------------------------------------------
   Widget _buildAppointmentsTab() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      children: [
-        // 1. NEED A CONSULTATION? BANNER
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: _primaryGreen,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: _primaryGreen.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
+    return RefreshIndicator(
+      onRefresh: _loadPatientDataAndAppointments,
+      color: _primaryGreen,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: _primaryGreen, borderRadius: BorderRadius.circular(24)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text(
-                      'NEED A CONSULTATION?',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFC7DFD0),
-                        letterSpacing: 0.6,
-                      ),
-                    ),
+                    Text('NEED A CONSULTATION?', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFC7DFD0))),
                     SizedBox(height: 6),
-                    Text(
-                      'Request Doctor\nVisit',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.15,
-                      ),
-                    ),
+                    Text('Request Doctor\nVisit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
                   ],
                 ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _orangeBtn,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: _orangeBtn, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  onPressed: _showBookSlotDialog,
+                  child: const Text('+ Book\nSlot', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Doctor booking request sent!')),
-                  );
-                },
-                child: const Text(
-                  '+ Book\nSlot',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 24),
+          Text('YOUR SCHEDULED VISITS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey.shade700)),
+          const SizedBox(height: 14),
 
-        const SizedBox(height: 24),
-        Text(
-          'YOUR SCHEDULED VISITS',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            color: Colors.grey.shade700,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // 2. CONFIRMED DOCTOR VISIT CARD
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          if (_isLoading)
+            const Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator()))
+          else if (_myAppointments.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.grey.shade200)),
+              child: Column(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5F1E8),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.medical_services_outlined,
-                      color: Color(0xFF4A3E8A),
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dr. Sharma',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            color: _textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Family Doctor',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2EFE5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'CONFIRMED',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF386646),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
+                  Icon(Icons.calendar_today_outlined, size: 40, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  const Text("No appointments booked yet.", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  const Text("Tap '+ Book Slot' above to schedule with a Doctor.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13)),
                 ],
               ),
-              const SizedBox(height: 14),
+            )
+          else
+            ..._myAppointments.map((appt) {
+              String docName = appt['caretaker_name'] ?? 'Doctor';
+              String spec = appt['specialization'] ?? 'Family Doctor';
+              String date = appt['appointment_date'] ?? '';
+              String time = appt['appointment_time'] ?? '';
+              String status = appt['status'] ?? 'pending';
+              String? img = appt['profile_image'];
 
-              // Date & Time Pills
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _bgCanvas,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 4))]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        Text('🗓️ ', style: TextStyle(fontSize: 14)),
-                        Text('Fri, 28 Aug', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
+                        _buildSafeAvatar(img),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(docName, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _textDark)),
+                              const SizedBox(height: 2),
+                              Text(spec, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(color: status == 'accepted' ? const Color(0xFFE2EFE5) : Colors.orange.shade50, borderRadius: BorderRadius.circular(12)),
+                          child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: status == 'accepted' ? const Color(0xFF386646) : Colors.orange.shade800)),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(color: _bgCanvas, borderRadius: BorderRadius.circular(14)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [const Text('🗓  ', style: TextStyle(fontSize: 14)), Text(date, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800))]),
+                          Row(children: [const Text('⏰  ', style: TextStyle(fontSize: 14)), Text(time, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800))]),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('⏰ ', style: TextStyle(fontSize: 14)),
-                        Text('10:30 AM', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
+                        Text('Reason: ${appt['reason'] ?? 'Checkup'}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
+
+                        // VIDEO CALL BUTTON (Active only when status is accepted)
+                        if (status == 'accepted')
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
+                            icon: const Icon(Icons.videocam, size: 16, color: Colors.white),
+                            label: const Text('Video Call', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            onPressed: _launchVideoCall,
+                          ),
                       ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Reason: Blood Pressure & Memory Review',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 30),
-      ],
+              );
+            }).toList(),
+        ],
+      ),
     );
   }
 
   // ----------------------------------------------------
-  // TAB 1: CAREGIVERS (Fix Appointment, Call, Video, Chat)
+  // TAB 1: CAREGIVERS
   // ----------------------------------------------------
   Widget _buildCaregiversTab() {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        Text(
-          'Select & Connect with Caretaker',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textDark),
-        ),
+        Text('All Available Caretakers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textDark)),
         const SizedBox(height: 4),
-        Text('Book a session or connect directly via Call/Chat.', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        Text('Find a doctor and book a slot directly.', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
         const SizedBox(height: 14),
 
-        ..._todayVisits.map((caretaker) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 1.5,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(radius: 26, backgroundImage: NetworkImage(caretaker['avatar'])),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(caretaker['name'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text(caretaker['role'], style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _primaryGreen.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text('Available Today', style: TextStyle(color: _primaryGreen, fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
+        if (_isLoading)
+          const Center(child: CircularProgressIndicator())
+        else
+          ..._realCaregivers.map((caretaker) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    _buildSafeAvatar(caretaker['profile_image'], radius: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(caretaker['full_name'] ?? 'Doctor', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(caretaker['specialization'] ?? 'Caretaker', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                        ],
                       ),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.call, size: 16, color: Colors.white),
-                        label: const Text('Call', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryGreen,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Starting Voice Call with ${caretaker['name']}...')));
-                        },
-                      ),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.videocam, size: 16, color: Colors.white),
-                        label: const Text('Video', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.shade700,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Joining Video Call with ${caretaker['name']}...')));
-                        },
-                      ),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Colors.black87),
-                        label: const Text('Message', style: TextStyle(color: Colors.black87, fontSize: 12)),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _activeChatDoctor = caretaker['name'];
-                            _selectedBottomIndex = 2;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: _primaryGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                      onPressed: () {
+                        setState(() {
+                          _selectedCaregiverId = caretaker['user_id'];
+                          _selectedBottomIndex = 0;
+                        });
+                        _showBookSlotDialog();
+                      },
+                      child: const Text('Book Slot', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
       ],
     );
   }
 
-  // ----------------------------------------------------
-  // TAB 2: MESSAGES (Chatting Screen)
-  // ----------------------------------------------------
   Widget _buildMessagesTab() {
-    String chatHeaderName = _activeChatDoctor ?? 'Dr. Schumacher, Elias';
-
     return Column(
       children: [
         Container(
@@ -482,24 +445,21 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
           color: Colors.white,
           child: Row(
             children: [
-              const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 20)),
+              _buildSafeAvatar(_activeChatDoctorImage, radius: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(chatHeaderName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(_activeChatDoctorName ?? 'Select Doctor', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     const Text('Online • Caretaker Support', style: TextStyle(fontSize: 11, color: Colors.green)),
                   ],
                 ),
               ),
-              IconButton(icon: const Icon(Icons.call, size: 20), onPressed: () {}),
             ],
           ),
         ),
         const Divider(height: 1),
-
-        // Chat message bubbles
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(14),
@@ -512,30 +472,16 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                   decoration: BoxDecoration(
                     color: isMe ? _primaryGreen : Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(14),
-                      topRight: const Radius.circular(14),
-                      bottomLeft: isMe ? const Radius.circular(14) : Radius.zero,
-                      bottomRight: isMe ? Radius.zero : const Radius.circular(14),
-                    ),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
-                    ],
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text(
-                    msg['text'],
-                    style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 13),
-                  ),
+                  child: Text(msg['text'], style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 13)),
                 ),
               );
             },
           ),
         ),
-
-        // Text input field
         Container(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
           color: Colors.white,
@@ -544,13 +490,7 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
               Expanded(
                 child: TextField(
                   controller: _msgInputController,
-                  decoration: InputDecoration(
-                    hintText: 'Type your symptoms or question...',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    filled: true,
-                    fillColor: const Color(0xFFF1F4EE),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                  ),
+                  decoration: InputDecoration(hintText: 'Type your message...', filled: true, fillColor: const Color(0xFFF1F4EE), border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -559,10 +499,9 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
                 child: IconButton(
                   icon: const Icon(Icons.send, color: Colors.white, size: 18),
                   onPressed: () {
-                    String text = _msgInputController.text.trim();
-                    if (text.isNotEmpty) {
+                    if (_msgInputController.text.trim().isNotEmpty) {
                       setState(() {
-                        _messages.add({'sender': 'patient', 'text': text});
+                        _messages.add({'sender': 'patient', 'text': _msgInputController.text.trim()});
                         _msgInputController.clear();
                       });
                     }
@@ -576,116 +515,34 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // TAB 3: PROFILE & APPOINTMENT REQUEST DETAILS
-  // ----------------------------------------------------
   Widget _buildProfileTab() {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       children: [
-        // Profile Info Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: _primaryGreen.withOpacity(0.2),
-                child: Icon(Icons.person, size: 36, color: _primaryGreen),
-              ),
+              _buildSafeAvatar(_patientProfileImage, radius: 32),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Adesh Bilvane', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(_patientName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
-                    Text('Patient ID: #SAH-2026-04', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: _cardTimeBg, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Blood: A+', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Age: 26', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
+                    Text('Patient ID: $_patientIdStr', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-
-        // Requested Appointments Section
-        Text(
-          'Your Appointment Requests',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _textDark),
-        ),
-        const SizedBox(height: 10),
-
-        ..._todayVisits.map((visit) {
-          bool isConfirmed = visit['status'] == 'Confirmed';
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isConfirmed ? Icons.check_circle : Icons.hourglass_top_rounded,
-                  color: isConfirmed ? Colors.green : Colors.orange,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(visit['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text('${visit['time']} ${visit['period']} • ${visit['role']}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isConfirmed ? Colors.green.withOpacity(0.12) : Colors.orange.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    visit['status'] ?? 'Pending',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isConfirmed ? Colors.green.shade800 : Colors.orange.shade800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
       ],
     );
   }
 
-  // ----------------------------------------------------
-  // BOTTOM NAVIGATION DOCK
-  // ----------------------------------------------------
   Widget _buildBottomNav() {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
@@ -698,7 +555,6 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
           children: [
             _buildNavItem(Icons.calendar_month, 'Appointments', 0),
             _buildNavItem(Icons.people_alt_outlined, 'Caregivers', 1),
-            const SizedBox(width: 40), // Center mic gap
             _buildNavItem(Icons.chat_bubble_outline, 'Messages', 2),
             _buildNavItem(Icons.account_circle_outlined, 'Profile', 3),
           ],
@@ -714,29 +570,9 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: isSelected ? _primaryGreen : Colors.black54,
-            size: 24,
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? _primaryGreen : Colors.black54,
-            ),
-          ),
-          if (isSelected)
-            Container(
-              margin: const EdgeInsets.only(top: 2),
-              height: 2.5,
-              width: 24,
-              decoration: BoxDecoration(
-                color: _primaryGreen,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+          Icon(icon, color: isSelected ? _primaryGreen : Colors.black54, size: 24),
+          Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? _primaryGreen : Colors.black54)),
+          if (isSelected) Container(margin: const EdgeInsets.only(top: 2), height: 2.5, width: 24, decoration: BoxDecoration(color: _primaryGreen, borderRadius: BorderRadius.circular(2))),
         ],
       ),
     );

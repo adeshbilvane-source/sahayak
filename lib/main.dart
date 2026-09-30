@@ -8,7 +8,7 @@ import 'screens/auth/patient_register_screen.dart';
 import 'screens/auth/doctor_login_screen.dart';
 
 // Doctor Screen (Uncommented & Active)
-import 'screens/doctor/doctor_home_screen.dart';
+import 'screens/doctor/doctor_main_screen.dart';
 
 // Patient Screens
 import 'screens/patient/patient_home_screen.dart';
@@ -68,7 +68,7 @@ class NeuroNestApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/patient_home': (context) => const PatientHomeScreen(),
         // Doctor Home Screen route active kar diya
-        '/doctor_home': (context) => const DoctorHomeScreen(),
+        '/doctor_home': (context) => const DoctorMainScreen(),
         '/emergency': (context) => const EmergencyScreen(),
         '/patient_login': (context) => const PatientLoginScreen(),
         '/register': (context) => const PatientRegisterScreen(),
