@@ -176,7 +176,7 @@ class _FamilyEmergencyScreenState extends State<FamilyEmergencyScreen> {
                   Text('Relationship', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _inkSoft)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: newRelation,
+                    initialValue: newRelation,
                     decoration: InputDecoration(
                       filled: true, fillColor: _canvas,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _greenTint, width: 1.5)),
@@ -323,7 +323,7 @@ class _FamilyEmergencyScreenState extends State<FamilyEmergencyScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   decoration: BoxDecoration(
                     color: _white,
-                    boxShadow: [BoxShadow(color: _ink.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 6))],
+                    boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
                   ),
                   child: Row(
                     children: [
@@ -361,7 +361,7 @@ class _FamilyEmergencyScreenState extends State<FamilyEmergencyScreen> {
                             decoration: BoxDecoration(
                               color: _white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: _ink.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 6))],
+                              boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
                             ),
                             child: Column(
                               children: [
@@ -380,7 +380,7 @@ class _FamilyEmergencyScreenState extends State<FamilyEmergencyScreen> {
                             decoration: BoxDecoration(
                               color: _white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: _ink.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 6))],
+                              boxShadow: [BoxShadow(color: _ink.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
                             ),
                             child: Row(
                               children: [
@@ -389,7 +389,7 @@ class _FamilyEmergencyScreenState extends State<FamilyEmergencyScreen> {
                                   decoration: BoxDecoration(color: _marigoldTint, shape: BoxShape.circle),
                                   clipBehavior: Clip.antiAlias,
                                   child: c.avatarUrl != null
-                                      ? Image.file(File(c.avatarUrl!), fit: BoxFit.cover, errorBuilder: (_,__,___) => const Center(child: Text('👤', style: TextStyle(fontSize: 24))))
+                                      ? Image.file(File(c.avatarUrl!), fit: BoxFit.cover, errorBuilder: (_,_,_) => const Center(child: Text('👤', style: TextStyle(fontSize: 24))))
                                       : const Center(child: Text('👤', style: TextStyle(fontSize: 24))),
                                 ),
                                 const SizedBox(width: 10),
