@@ -8,7 +8,7 @@ class ApiService {
   // Aapka current laptop IP
   static const String myLaptopIp = '10.184.82.126';
 
-  // Base URL helper
+  // Base URL helper (NOTE: isme pehle se '/api' included hai)
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:5000/api';
@@ -33,7 +33,7 @@ class ApiService {
           .post(primaryUrl, headers: headers, body: encodedBody)
           .timeout(const Duration(seconds: 4));
     } catch (_) {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         final fallbackUrl = Uri.parse('$emulatorUrl$endpoint');
         return await http
             .post(fallbackUrl, headers: headers, body: encodedBody)
@@ -49,7 +49,7 @@ class ApiService {
       final primaryUrl = Uri.parse('$baseUrl$endpoint');
       return await http.get(primaryUrl).timeout(const Duration(seconds: 4));
     } catch (_) {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         final fallbackUrl = Uri.parse('$emulatorUrl$endpoint');
         return await http.get(fallbackUrl).timeout(const Duration(seconds: 5));
       }
@@ -334,7 +334,7 @@ class ApiService {
     }
   }
 
-  // Get Caretaker Home Appointments
+  // Get Caretaker Home Appointments (accepted / confirmed)
   static Future<List<dynamic>> getCaretakerAppointments(int caretakerId) async {
     try {
       final response = await _getWithFallback('/caretaker-appointments/$caretakerId');
@@ -346,9 +346,16 @@ class ApiService {
     }
     return [];
   }
+
+  // ----------------------------------------------------
+  // APPOINTMENTS - DOCTOR SIDE: PENDING REQUESTS
+  // FIX: pehle yahan '$baseUrl/api/...' tha, jabki baseUrl me '/api' already hai
+  // (URL /api/api/... ban raha tha -> 404 -> empty list). Ab fallback bhi use hota hai.
+  // ----------------------------------------------------
   static Future<List<dynamic>> getCaretakerPendingAppointments(int caretakerId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/caretaker-pending-appointments/$caretakerId'));
+      final response = await _getWithFallback('/caretaker-pending-appointments/$caretakerId');
+      debugPrint('Pending appts [$caretakerId]: ${response.statusCode} ${response.body}');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
@@ -358,21 +365,115 @@ class ApiService {
     return [];
   }
 
+  // Alias: naya schedule screen is naam se call karta hai
+  static Future<List<dynamic>> getPendingAppointments(int caretakerId) =>
+      getCaretakerPendingAppointments(caretakerId);
+
+  // FIX: same double '/api' bug + fallback missing tha
   static Future<bool> updateAppointmentStatus(int appointmentId, String status) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/update-appointment-status'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'appointment_id': appointmentId, 'status': status}),
-      );
+      final response = await _postWithFallback('/update-appointment-status', {
+        'appointment_id': appointmentId,
+        'status': status,
+      });
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['success'] ?? false;
       }
+      debugPrint('Update appointment status failed: ${response.statusCode} ${response.body}');
     } catch (e) {
       debugPrint('Update appointment status error: $e');
     }
     return false;
+  }
+
+  static Future<List<dynamic>> getPatientAcceptedCaretakers(int patientId) async {
+    try {
+      final response = await _getWithFallback('/patient-accepted-caretakers/$patientId');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Fetch patient accepted caretakers error: $e');
+    }
+    return [];
+  }
+
+  static Future<List<dynamic>> getCaretakerAcceptedPatients(int caretakerId) async {
+    try {
+      final response = await _getWithFallback('/accepted-patients/$caretakerId');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Fetch accepted patients error: $e');
+    }
+    return [];
+  }
+
+  // ----------------------------------------------------
+  // PATIENT SIDE: LOG DATA FOR ANALYTICS
+  // reminderType: 'medicine' | 'water' | 'routine'
+  // status: 'taken' | 'missed' | 'snoozed'
+  // ----------------------------------------------------
+  static Future<bool> logReminder(int patientId, String reminderType, String status, {DateTime? scheduledAt}) async {
+    try {
+      final response = await _postWithFallback('/log-reminder', {
+        'patient_id': patientId,
+        'reminder_type': reminderType,
+        'status': status,
+        'scheduled_at': (scheduledAt ?? DateTime.now()).toIso8601String(),
+      });
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Log reminder error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> logGameScore(int patientId, String gameName, int score, {int? avgReactionMs}) async {
+    try {
+      final response = await _postWithFallback('/log-game-score', {
+        'patient_id': patientId,
+        'game_name': gameName,
+        'score': score,
+        'avg_reaction_ms': avgReactionMs,
+      });
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Log game score error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> logVitals(int patientId, {int? heartRate, int? spo2}) async {
+    try {
+      final response = await _postWithFallback('/log-vitals', {
+        'patient_id': patientId,
+        'heart_rate': heartRate,
+        'spo2': spo2,
+      });
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Log vitals error: $e');
+      return false;
+    }
+  }
+
+  // ----------------------------------------------------
+  // PATIENT ANALYTICS (Caretaker side, real data)
+  // ----------------------------------------------------
+  static Future<Map<String, dynamic>?> getPatientAnalytics(int patientId, int caretakerId) async {
+    try {
+      final response = await _getWithFallback('/patient-analytics/$patientId?caretaker_id=$caretakerId');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(response.body));
+      }
+      debugPrint('Analytics failed: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Fetch patient analytics error: $e');
+    }
+    return null;
   }
 
   // Get Patient Appointments

@@ -17,8 +17,13 @@ class _PatientScheduleScreenState extends State<PatientScheduleScreen> {
   final Color _bgHint = const Color(0xFFF9FAF7);
 
   List<dynamic> _acceptedPatients = [];
+  List<dynamic> _pendingAppointments = [];
+  List<dynamic> _confirmedAppointments = [];
   bool _isLoading = true;
   int _currentCaretakerId = 0;
+
+  // Jis appointment pe accept/reject chal raha hai (double tap rokne ke liye)
+  final Set<int> _processingIds = {};
 
   @override
   void initState() {
@@ -29,19 +34,84 @@ class _PatientScheduleScreenState extends State<PatientScheduleScreen> {
   Future<void> _loadCaretakerData() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('userId') ?? 0;
-    setState(() {
-      _currentCaretakerId = userId;
-    });
-    _fetchAcceptedPatients();
+    debugPrint('Doctor userId from prefs: $userId');
+    if (!mounted) return;
+    setState(() => _currentCaretakerId = userId);
+    await _fetchAll();
   }
 
-  Future<void> _fetchAcceptedPatients() async {
+  /// Teeno lists ek saath refresh karta hai
+  Future<void> _fetchAll() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    final patients = await ApiService.getAcceptedPatients(_currentCaretakerId);
-    setState(() {
-      _acceptedPatients = patients;
-      _isLoading = false;
-    });
+    try {
+      final results = await Future.wait([
+        ApiService.getAcceptedPatients(_currentCaretakerId),
+        ApiService.getPendingAppointments(_currentCaretakerId),
+        ApiService.getCaretakerAppointments(_currentCaretakerId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _acceptedPatients = results[0];
+        _pendingAppointments = results[1];
+        _confirmedAppointments = results[2];
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Fetch all error: $e');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleAppointmentAction(Map<String, dynamic> appt, String status) async {
+    final int id = int.tryParse(appt['appointment_id'].toString()) ?? 0;
+    if (id == 0 || _processingIds.contains(id)) return;
+
+    setState(() => _processingIds.add(id));
+    final ok = await ApiService.updateAppointmentStatus(id, status);
+    if (!mounted) return;
+    setState(() => _processingIds.remove(id));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? (status == 'accepted' ? 'Appointment accepted!' : 'Appointment rejected.')
+            : 'Something went wrong. Please try again.'),
+        backgroundColor: ok ? (status == 'accepted' ? Colors.green : Colors.red) : Colors.orange,
+      ),
+    );
+
+    if (ok) await _fetchAll();
+  }
+
+  Future<void> _makePhoneCall(String? phoneNumber) async {
+    if (phoneNumber == null || phoneNumber.trim().isEmpty || phoneNumber == 'null') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Emergency number not available for this patient', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+      return;
+    }
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber.trim());
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        await launchUrl(launchUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Call error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the dialer')));
+      }
+    }
+  }
+
+  Map<String, dynamic> _patientMapFromAppointment(Map<String, dynamic> a) {
+    return {
+      'patient_id': a['patient_id'],
+      'full_name': a['patient_name'],
+      'profile_image': a['profile_image'],
+      'emergency_contact': a['emergency_contact'],
+    };
   }
 
   Widget _buildSafeAvatar(String? img, {double radius = 28}) {
@@ -63,6 +133,243 @@ class _PatientScheduleScreenState extends State<PatientScheduleScreen> {
     }
   }
 
+  Widget _sectionTitle(String title, {int? count, String? subtitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _primaryDark, fontFamily: 'serif')),
+            if (count != null && count > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(10)),
+                child: Text('$count', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          ],
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 4),
+          Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        ],
+        const SizedBox(height: 14),
+      ],
+    );
+  }
+
+  Widget _emptyHint(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(child: Text(text, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13))),
+    );
+  }
+
+  Widget _dateTimeRow(Map<String, dynamic> a) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: const Color(0xFFF5F6F3), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.calendar_month, size: 16, color: Colors.blueGrey),
+              const SizedBox(width: 6),
+              Text('${a['appointment_date'] ?? '-'}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _primaryDark)),
+            ],
+          ),
+          Row(
+            children: [
+              const Icon(Icons.alarm, size: 16, color: Colors.redAccent),
+              const SizedBox(width: 6),
+              Text('${a['appointment_time'] ?? '-'}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _primaryDark)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingCard(Map<String, dynamic> a) {
+    final int id = int.tryParse(a['appointment_id'].toString()) ?? 0;
+    final bool busy = _processingIds.contains(id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildSafeAvatar(a['profile_image'], radius: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(a['patient_name'] ?? 'Unknown Patient', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _primaryDark)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Text('PENDING', style: TextStyle(color: Colors.orange.shade800, fontSize: 10, fontWeight: FontWeight.w900)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _dateTimeRow(a),
+          const SizedBox(height: 10),
+          Text('Reason: ${a['reason'] ?? 'Routine Checkup'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: busy ? null : () => _handleAppointmentAction(a, 'rejected'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: busy ? null : () => _handleAppointmentAction(a, 'accepted'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: busy
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmedCard(Map<String, dynamic> a) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PatientDetailScreen(patientData: _patientMapFromAppointment(a))),
+        ).then((_) => _fetchAll());
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.35)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildSafeAvatar(a['profile_image'], radius: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(a['patient_name'] ?? 'Unknown Patient', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _primaryDark)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                  child: Text('CONFIRMED', style: TextStyle(color: Colors.green.shade800, fontSize: 10, fontWeight: FontWeight.w900)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _dateTimeRow(a),
+            const SizedBox(height: 10),
+            Text('Reason: ${a['reason'] ?? 'Routine Checkup'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primaryDark,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () {
+                  // Yahan par explicitly sirf emergency_contact ko call ke liye bheja ja raha hai
+                  String? phoneToCall = a['emergency_contact']?.toString();
+                  _makePhoneCall(phoneToCall);
+                },
+                icon: const Icon(Icons.phone, color: Colors.white, size: 16),
+                label: const Text('Call Patient', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectedPatientTile(Map<String, dynamic> patient) {
+    String name = patient['full_name'] ?? 'Unknown Patient';
+    String? image = patient['profile_image'];
+    String pId = '#SAH-2026-0${patient['patient_id'] ?? 0}';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PatientDetailScreen(patientData: patient)),
+        ).then((_) => _fetchAll());
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            _buildSafeAvatar(image, radius: 30),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _primaryDark)),
+                  const SizedBox(height: 4),
+                  Text('ID: $pId', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(color: Color(0xFFEEF5E5), shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF6A902A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,72 +381,37 @@ class _PatientScheduleScreenState extends State<PatientScheduleScreen> {
             const SizedBox(height: 10),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _fetchAcceptedPatients,
+                onRefresh: _fetchAll,
                 color: _primaryDark,
                 child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   children: [
-                    Text('My Connected Patients', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _primaryDark, fontFamily: 'serif')),
-                    const SizedBox(height: 6),
-                    Text('Tap on any patient to view details, analytics, and reminders.', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                    const SizedBox(height: 24),
-
                     if (_isLoading)
                       const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
-                    else if (_acceptedPatients.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 60),
-                        child: Center(
-                          child: Text("No connected patients yet.", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14)),
-                        ),
-                      )
-                    else
-                      ..._acceptedPatients.map((patient) {
-                        String name = patient['full_name'] ?? 'Unknown Patient';
-                        String? image = patient['profile_image'];
-                        String pId = '#SAH-2026-0${patient['patient_id'] ?? 0}';
+                    else ...[
+                      _sectionTitle('Appointment Requests', count: _pendingAppointments.length, subtitle: 'Patients waiting for your approval.'),
+                      if (_pendingAppointments.isEmpty)
+                        _emptyHint('No pending requests right now.')
+                      else
+                        ..._pendingAppointments.map((a) => _buildPendingCard(Map<String, dynamic>.from(a))),
 
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PatientDetailScreen(patientData: patient),
-                              ),
-                            ).then((_) => _fetchAcceptedPatients()); // Refresh lazmi hai back aane par
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
-                            ),
-                            child: Row(
-                              children: [
-                                _buildSafeAvatar(image, radius: 30),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _primaryDark)),
-                                      const SizedBox(height: 4),
-                                      Text('ID: $pId', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: const BoxDecoration(color: Color(0xFFEEF5E5), shape: BoxShape.circle),
-                                  child: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF6A902A)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
+                      const SizedBox(height: 16),
+
+                      _sectionTitle('Confirmed Schedule', subtitle: 'Your accepted appointments.'),
+                      if (_confirmedAppointments.isEmpty)
+                        _emptyHint('No confirmed appointments yet.')
+                      else
+                        ..._confirmedAppointments.map((a) => _buildConfirmedCard(Map<String, dynamic>.from(a))),
+
+                      const SizedBox(height: 16),
+
+                      _sectionTitle('My Connected Patients', subtitle: 'Tap on any patient to view details, analytics, and reminders.'),
+                      if (_acceptedPatients.isEmpty)
+                        _emptyHint('No connected patients yet.')
+                      else
+                        ..._acceptedPatients.map((p) => _buildConnectedPatientTile(Map<String, dynamic>.from(p))),
+                    ],
                   ],
                 ),
               ),
@@ -193,19 +465,22 @@ class PatientDetailScreen extends StatelessWidget {
   const PatientDetailScreen({super.key, required this.patientData});
 
   Future<void> _makePhoneCall(BuildContext context, String? phoneNumber) async {
-    if (phoneNumber == null || phoneNumber.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number not available')));
+    if (phoneNumber == null || phoneNumber.trim().isEmpty || phoneNumber == 'null') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Emergency number not available'), backgroundColor: Colors.red));
       return;
     }
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber.trim());
     try {
       if (await canLaunchUrl(launchUri)) {
         await launchUrl(launchUri);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch dialer')));
+        await launchUrl(launchUri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       debugPrint('Call error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the dialer')));
+      }
     }
   }
 
@@ -223,7 +498,6 @@ class PatientDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // Yaha backend API call lagana hai future mein remove karne ke liye.
               Navigator.pop(ctx);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -263,7 +537,10 @@ class PatientDetailScreen extends StatelessWidget {
     final Color _bgHint = const Color(0xFFF9FAF7);
 
     String name = patientData['full_name'] ?? 'Unknown Patient';
-    String? phone = patientData['emergency_contact'];
+
+    // Yahan bhi sirf emergency_contact ko hi map kiya gaya hai
+    String? phone = patientData['emergency_contact']?.toString();
+
     String? image = patientData['profile_image'];
     String pId = '#SAH-2026-0${patientData['patient_id'] ?? 0}';
     String age = patientData['age']?.toString() ?? 'N/A';
@@ -294,7 +571,6 @@ class PatientDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // PROFILE DETAILS CARD
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -318,7 +594,6 @@ class PatientDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // CALL PATIENT BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -335,10 +610,7 @@ class PatientDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 30),
-
-            // ANALYTICS SECTION
             Text('Health Analytics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _primaryDark, fontFamily: 'serif')),
             const SizedBox(height: 16),
             Row(
@@ -356,16 +628,12 @@ class PatientDetailScreen extends StatelessWidget {
                 Expanded(child: _buildAnalyticsCard('Sleep', '6.5', 'hrs', Icons.bedtime, Colors.indigo.shade400)),
               ],
             ),
-
             const SizedBox(height: 30),
-
-            // REMINDERS SECTION
             Text('Active Reminders', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _primaryDark, fontFamily: 'serif')),
             const SizedBox(height: 16),
             _buildReminderCard('Morning Medicine', '09:00 AM', Icons.medication, Colors.teal),
             _buildReminderCard('Physiotherapy Session', '05:30 PM', Icons.fitness_center, Colors.orange),
             _buildReminderCard('Drink Water (2L)', 'Ongoing', Icons.water_drop, Colors.blue),
-
             const SizedBox(height: 40),
           ],
         ),

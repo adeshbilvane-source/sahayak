@@ -31,6 +31,9 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
   List<dynamic> _myAppointments = [];
   bool _isLoading = true;
 
+  // Connected doctors for Chat (Instagram style list)
+  List<dynamic> _connectedDoctorsForChat = [];
+
   // Booking Form Controllers
   final TextEditingController _dateController = TextEditingController(text: 'Fri, 28 Aug');
   final TextEditingController _timeController = TextEditingController(text: '10:30 AM');
@@ -38,6 +41,7 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
   int? _selectedCaregiverId;
 
   // Chat state
+  int? _activeChatDoctorId;
   String? _activeChatDoctorName;
   String? _activeChatDoctorImage;
   final TextEditingController _msgInputController = TextEditingController();
@@ -55,14 +59,17 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     final prefs = await SharedPreferences.getInstance();
     int uId = prefs.getInt('userId') ?? 0;
 
-    setState(() {
-      _patientName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Patient';
-      _patientUserId = uId;
-      _patientIdStr = '#SAH-2026-0$uId';
-      _patientProfileImage = prefs.getString('profile_image');
-    });
+    if (mounted) {
+      setState(() {
+        _patientName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Patient';
+        _patientUserId = uId;
+        _patientIdStr = '#SAH-2026-0$uId';
+        _patientProfileImage = prefs.getString('profile_image');
+      });
+    }
 
     _fetchCaregiversAndAppointments();
+    _fetchConnectedDoctorsForChat();
   }
 
   Future<void> _fetchCaregiversAndAppointments() async {
@@ -72,17 +79,32 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     final caretakers = await ApiService.getAllCaretakers();
     final appointments = await ApiService.getPatientAppointments(_patientUserId);
 
-    setState(() {
-      _realCaregivers = caretakers;
-      _myAppointments = appointments;
-      _isLoading = false;
+    if (mounted) {
+      setState(() {
+        _realCaregivers = caretakers;
+        _myAppointments = appointments;
+        _isLoading = false;
 
-      if (caretakers.isNotEmpty) {
-        _selectedCaregiverId = caretakers[0]['user_id'];
-        _activeChatDoctorName = caretakers[0]['full_name'];
-        _activeChatDoctorImage = caretakers[0]['profile_image'];
-      }
-    });
+        if (caretakers.isNotEmpty && _selectedCaregiverId == null) {
+          _selectedCaregiverId = caretakers[0]['user_id'];
+        }
+      });
+    }
+  }
+
+  Future<void> _fetchConnectedDoctorsForChat() async {
+    if (_patientUserId == 0) return;
+    final caretakers = await ApiService.getPatientAcceptedCaretakers(_patientUserId);
+    if (mounted) {
+      setState(() {
+        _connectedDoctorsForChat = caretakers;
+        if (caretakers.isNotEmpty && _activeChatDoctorId == null) {
+          _activeChatDoctorId = caretakers[0]['caretaker_id'];
+          _activeChatDoctorName = caretakers[0]['full_name'];
+          _activeChatDoctorImage = caretakers[0]['profile_image'];
+        }
+      });
+    }
   }
 
   // --- BOOK SLOT DIALOG ---
@@ -161,10 +183,14 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
                 );
 
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appointment requested successfully!'), backgroundColor: Colors.green));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appointment requested successfully!'), backgroundColor: Colors.green));
+                  }
                   _loadPatientDataAndAppointments();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to book appointment.'), backgroundColor: Colors.red));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to book appointment.'), backgroundColor: Colors.red));
+                  }
                 }
               },
               child: const Text('Send Request', style: TextStyle(color: Colors.white)),
@@ -181,7 +207,9 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open video call link')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open video call link')));
+        }
       }
     } catch (e) {
       debugPrint('Video call error: $e');
@@ -190,7 +218,7 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
 
   Widget _buildSafeAvatar(String? img, {double radius = 24}) {
     if (img == null || img.trim().isEmpty) {
-      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withOpacity(0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
+      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withValues(alpha: 0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
     }
     try {
       if (img.contains('base64,')) {
@@ -203,7 +231,7 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
         return CircleAvatar(radius: radius, backgroundImage: FileImage(File(img)));
       }
     } catch (e) {
-      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withOpacity(0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
+      return CircleAvatar(radius: radius, backgroundColor: _primaryGreen.withValues(alpha: 0.2), child: Icon(Icons.person, color: _primaryGreen, size: radius));
     }
   }
 
@@ -257,9 +285,6 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // TAB 0: APPOINTMENTS WITH SCHEDULE & VIDEO CALL
-  // ----------------------------------------------------
   Widget _buildAppointmentsTab() {
     return RefreshIndicator(
       onRefresh: _loadPatientDataAndAppointments,
@@ -321,7 +346,7 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 4))]),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 14, offset: const Offset(0, 4))]),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -363,8 +388,6 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Reason: ${appt['reason'] ?? 'Checkup'}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
-
-                        // VIDEO CALL BUTTON (Active only when status is accepted)
                         if (status == 'accepted')
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
@@ -383,9 +406,6 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // TAB 1: CAREGIVERS
-  // ----------------------------------------------------
   Widget _buildCaregiversTab() {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -437,29 +457,81 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
     );
   }
 
+  // --- MESSAGES TAB (INSTAGRAM STYLE CONNECTED DOCTORS LIST & CHAT) ---
   Widget _buildMessagesTab() {
+    if (_connectedDoctorsForChat.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            'No connected doctors yet.\nConnect with a caretaker to start chatting!',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: [
+        // Connected Doctors Horizontal List (Instagram Story / Chat list style)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          height: 85,
           color: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _connectedDoctorsForChat.length,
+            itemBuilder: (context, index) {
+              var doc = _connectedDoctorsForChat[index];
+              bool isSelected = _activeChatDoctorId == doc['caretaker_id'];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _activeChatDoctorId = doc['caretaker_id'];
+                    _activeChatDoctorName = doc['full_name'];
+                    _activeChatDoctorImage = doc['profile_image'];
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isSelected ? _primaryGreen : Colors.transparent, width: 2),
+                        ),
+                        child: _buildSafeAvatar(doc['profile_image'], radius: 22),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(doc['full_name'] ?? 'Doctor', style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const Divider(height: 1),
+
+        // Active Chat Header (Fixed string interpolation syntax here)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFFF9FBF7),
           child: Row(
             children: [
-              _buildSafeAvatar(_activeChatDoctorImage, radius: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_activeChatDoctorName ?? 'Select Doctor', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const Text('Online • Caretaker Support', style: TextStyle(fontSize: 11, color: Colors.green)),
-                  ],
-                ),
-              ),
+              _buildSafeAvatar(_activeChatDoctorImage, radius: 16),
+              const SizedBox(width: 8),
+              Text('Chatting with ${_activeChatDoctorName ?? 'Doctor'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ],
           ),
         ),
         const Divider(height: 1),
+
+        // Messages List
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(14),
@@ -482,6 +554,8 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
             },
           ),
         ),
+
+        // Message Input Box
         Container(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
           color: Colors.white,
@@ -490,7 +564,12 @@ class _CaregiversScheduleScreenState extends State<CaregiversScheduleScreen> {
               Expanded(
                 child: TextField(
                   controller: _msgInputController,
-                  decoration: InputDecoration(hintText: 'Type your message...', filled: true, fillColor: const Color(0xFFF1F4EE), border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none)),
+                  decoration: InputDecoration(
+                    hintText: 'Type your message...',
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4EE),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

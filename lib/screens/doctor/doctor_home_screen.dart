@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service.dart';
 import 'doctor_schedule_screen.dart';
 import 'patient_schedule_screen.dart';
+import 'patient_analytics_tab.dart';
 
 class DoctorHomeTab extends StatefulWidget {
   const DoctorHomeTab({super.key});
@@ -36,11 +37,13 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
     final prefs = await SharedPreferences.getInstance();
     final uId = prefs.getInt('userId') ?? 0;
 
-    setState(() {
-      _caretakerId = uId;
-      _doctorName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Doctor';
-      _profileImage = prefs.getString('profile_image');
-    });
+    if (mounted) {
+      setState(() {
+        _caretakerId = uId;
+        _doctorName = prefs.getString('savedUsername') ?? prefs.getString('full_name') ?? 'Doctor';
+        _profileImage = prefs.getString('profile_image');
+      });
+    }
 
     if (_caretakerId > 0) {
       final data = await ApiService.getUserProfile(_caretakerId);
@@ -487,7 +490,19 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       elevation: 0,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PatientAnalyticsTab(
+                            patientData: {
+                              'full_name': _doctorName,
+                              'patient_id': _caretakerId,
+                            },
+                          ),
+                        ),
+                      );
+                    },
                     child: const Text('View', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),

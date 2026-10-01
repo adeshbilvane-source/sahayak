@@ -18,6 +18,7 @@ dependencies:
   url_launcher: ^6.3.2
 
   http: ^1.2.0
+  alarm: ^5.13.3
 
 dev_dependencies:
   flutter_test:
